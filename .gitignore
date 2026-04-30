@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# drizzle migrations are tracked, but local sqlite/build artifacts aren't
+/drizzle/*.sql.local
 
 # vercel
 .vercel
