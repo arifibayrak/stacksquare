@@ -1,12 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/sidebar";
 
 export const metadata = { title: "Admin · StackSquare" };
 
-// Defense-in-depth gate: every /admin/* request runs through this layout
-// before any child page renders. If the request is unauthenticated,
-// auth.protect() redirects to /sign-in. This works regardless of whether
-// Next.js 16's proxy.ts middleware convention is picked up by Clerk.
+// Server-side auth gate. Every /admin/* request lands here. Unauthed
+// requests get a 307 to /sign-in with the original path preserved as
+// redirect_url, so the user lands back where they were trying to go
+// after signing in. Works in dev and prod regardless of middleware.
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({
@@ -14,7 +15,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await auth.protect();
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/sign-in?redirect_url=/admin");
+  }
 
   return (
     <div className="flex min-h-screen">
