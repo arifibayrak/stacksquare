@@ -10,7 +10,7 @@ const sections = [
     label: "Pipeline",
     links: [
       { href: "/admin", label: "Dashboard" },
-      { href: "/admin/pipeline", label: "Kanban" },
+      { href: "/admin/pipeline", label: "Pipeline" },
       { href: "/admin/contacts", label: "Contacts" },
     ],
   },

@@ -36,6 +36,8 @@ export default async function ContactsPage({
     );
   }
 
+  const isFiltered = Boolean(q || stage || filter);
+
   const list = await db
     .select()
     .from(contacts)
@@ -47,14 +49,16 @@ export default async function ContactsPage({
     <div className="px-8 py-10">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Contacts</h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
+            Contacts
+          </h1>
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
             {list.length} shown · sorted by recent activity
           </p>
         </div>
         <Link
           href="/admin/contacts/new"
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          className="rounded-md bg-[var(--color-ink)] px-4 py-2 text-sm font-medium text-[var(--color-paper)] hover:opacity-80"
         >
           + New contact
         </Link>
@@ -84,10 +88,11 @@ export default async function ContactsPage({
         </button>
       </form>
 
-      <div className="mt-6 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mt-6 overflow-hidden rounded-lg border border-[var(--color-rule)] bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <table className="w-full text-sm">
-          <thead className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
+          <thead className="border-b border-[var(--color-rule)] text-left text-xs uppercase tracking-wide text-[var(--color-ink-muted)] dark:border-zinc-800">
             <tr>
+              <th className="w-8 px-4 py-3"></th>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Role / Company</th>
               <th className="px-4 py-3">Stage</th>
@@ -96,59 +101,86 @@ export default async function ContactsPage({
               <th className="px-4 py-3">Due</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          <tbody className="divide-y divide-[var(--color-rule)] dark:divide-zinc-800">
             {list.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-zinc-500">
-                  No contacts yet.{" "}
-                  <Link
-                    href="/admin/contacts/new"
-                    className="text-brand-600 hover:underline"
-                  >
-                    add the first one
-                  </Link>
-                  .
+                <td
+                  colSpan={7}
+                  className="px-4 py-16 text-center text-sm text-[var(--color-ink-muted)]"
+                >
+                  {isFiltered ? (
+                    <>
+                      No matches.{" "}
+                      <Link
+                        href="/admin/contacts"
+                        className="text-brand-600 hover:underline"
+                      >
+                        Clear filters
+                      </Link>
+                      .
+                    </>
+                  ) : (
+                    <>
+                      No contacts yet.{" "}
+                      <Link
+                        href="/admin/contacts/new"
+                        className="text-brand-600 hover:underline"
+                      >
+                        Add the first one
+                      </Link>
+                      .
+                    </>
+                  )}
                 </td>
               </tr>
             ) : (
-              list.map((c) => (
-                <tr
-                  key={c.id}
-                  className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/contacts/${c.id}`}
-                      className="font-medium hover:text-brand-600"
-                    >
-                      {c.name}
-                    </Link>
-                    {c.priority === "p1" && (
-                      <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
-                        P1
+              list.map((c) => {
+                const dot =
+                  c.priority === "p1"
+                    ? "bg-red-500"
+                    : c.priority === "p2"
+                      ? "bg-amber-500"
+                      : "bg-zinc-300";
+                return (
+                  <tr
+                    key={c.id}
+                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                  >
+                    <td className="px-4 py-3">
+                      <span
+                        className={"inline-block h-2 w-2 rounded-full " + dot}
+                        title={(c.priority ?? "p2").toUpperCase()}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/admin/contacts/${c.id}`}
+                        className="font-medium text-[var(--color-ink)] hover:text-brand-600"
+                      >
+                        {c.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-ink-soft)]">
+                      {c.role}
+                      {c.company ? ` · ${c.company}` : ""}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs dark:bg-zinc-800">
+                        {STAGE_LABELS[c.stage]}
                       </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                    {c.role}
-                    {c.company ? ` · ${c.company}` : ""}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs dark:bg-zinc-800">
-                      {STAGE_LABELS[c.stage]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 capitalize text-zinc-600 dark:text-zinc-400">
-                    {c.owner ?? "·"}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                    {c.nextAction ?? "·"}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                    {formatDate(c.nextActionDue)}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="px-4 py-3 capitalize text-[var(--color-ink-soft)]">
+                      {c.owner ?? "·"}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-ink-soft)]">
+                      {c.nextAction ?? "·"}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-ink-soft)]">
+                      {formatDate(c.nextActionDue)}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

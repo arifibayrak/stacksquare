@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { eq, desc } from "drizzle-orm";
-import { db, contacts, touchLog, STAGE_LABELS } from "@/db";
+import { db, contacts, touchLog } from "@/db";
 import { ContactForm } from "@/components/admin/contact-form";
-import { TouchLogForm, DeleteContactButton } from "./client";
+import {
+  TouchLogForm,
+  DeleteContactButton,
+  ContactQuickActions,
+} from "./client";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -30,26 +34,33 @@ export default async function ContactDetail({
 
   return (
     <div className="px-8 py-10">
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
           <Link
             href="/admin/contacts"
-            className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+            className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
           >
             ← Contacts
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+          <h1 className="mt-2 truncate text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
             {contact.name}
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {contact.role}
-            {contact.company ? ` · ${contact.company}` : ""} ·{" "}
-            <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs dark:bg-zinc-800">
-              {STAGE_LABELS[contact.stage]}
-            </span>
-          </p>
+          {(contact.role || contact.company) && (
+            <p className="mt-1 truncate text-sm text-[var(--color-ink-muted)]">
+              {[contact.role, contact.company].filter(Boolean).join(" · ")}
+            </p>
+          )}
         </div>
         <DeleteContactButton id={contact.id} />
+      </div>
+
+      <div className="mt-4">
+        <ContactQuickActions
+          id={contact.id}
+          stage={contact.stage}
+          priority={contact.priority}
+          owner={contact.owner}
+        />
       </div>
 
       <div className="mt-10 grid gap-12 lg:grid-cols-[2fr_1fr]">

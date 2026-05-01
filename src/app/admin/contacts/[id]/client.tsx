@@ -1,7 +1,65 @@
 "use client";
 
 import { useTransition } from "react";
-import { logTouch, deleteContact } from "@/lib/actions/contacts";
+import {
+  logTouch,
+  deleteContact,
+  moveContactStage,
+  setContactPriority,
+  setContactOwner,
+} from "@/lib/actions/contacts";
+import { QuickPill } from "@/components/admin/quick-pill";
+import { STAGES, STAGE_LABELS } from "@/db/schema";
+
+export function ContactQuickActions({
+  id,
+  stage,
+  priority,
+  owner,
+}: {
+  id: string;
+  stage: (typeof STAGES)[number];
+  priority: "p1" | "p2" | "p3" | null;
+  owner: "arif" | "kerem" | "both" | null;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <QuickPill
+        label="Stage"
+        current={stage}
+        options={STAGES.map((s) => ({ value: s, label: STAGE_LABELS[s] }))}
+        onChange={async (next) => {
+          await moveContactStage(id, next as (typeof STAGES)[number]);
+        }}
+      />
+      <QuickPill
+        label="Priority"
+        current={priority ?? "p2"}
+        options={[
+          { value: "p1", label: "P1" },
+          { value: "p2", label: "P2" },
+          { value: "p3", label: "P3" },
+        ]}
+        onChange={async (next) => {
+          await setContactPriority(id, next as "p1" | "p2" | "p3");
+        }}
+      />
+      <QuickPill
+        label="Owner"
+        current={owner ?? ""}
+        options={[
+          { value: "", label: "Unassigned" },
+          { value: "arif", label: "Arif" },
+          { value: "kerem", label: "Kerem" },
+          { value: "both", label: "Both" },
+        ]}
+        onChange={async (next) => {
+          await setContactOwner(id, next as "" | "arif" | "kerem" | "both");
+        }}
+      />
+    </div>
+  );
+}
 
 const CHANNELS: Array<[string, string]> = [
   ["linkedin_dm", "LinkedIn DM"],

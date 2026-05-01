@@ -90,6 +90,40 @@ export async function moveContactStage(
     .where(eq(contacts.id, id));
   revalidatePath("/admin/pipeline");
   revalidatePath("/admin/contacts");
+  revalidatePath(`/admin/contacts/${id}`);
+}
+
+export async function setContactPriority(
+  id: string,
+  priority: (typeof PRIORITY)[number],
+) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+  await db
+    .update(contacts)
+    .set({ priority, updatedAt: new Date() })
+    .where(eq(contacts.id, id));
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin/contacts");
+  revalidatePath(`/admin/contacts/${id}`);
+}
+
+export async function setContactOwner(
+  id: string,
+  owner: (typeof OWNER)[number] | "",
+) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+  await db
+    .update(contacts)
+    .set({
+      owner: owner === "" ? null : owner,
+      updatedAt: new Date(),
+    })
+    .where(eq(contacts.id, id));
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin/contacts");
+  revalidatePath(`/admin/contacts/${id}`);
 }
 
 export async function deleteContact(id: string) {
