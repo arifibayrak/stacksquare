@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoMark } from "@/components/logo-mark";
 
 const links = [
   { href: "/episodes", label: "Episodes" },
@@ -13,9 +14,16 @@ export function SiteNav() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-7 sm:py-9">
         <Link
           href="/"
-          className="font-mono text-base font-semibold tracking-tight text-[var(--color-ink)]"
+          className="group flex items-center gap-3 text-[var(--color-ink)]"
+          aria-label="StackSquare home"
         >
-          stack<span className="text-[var(--color-brand-500)]">square</span>
+          <LogoMark
+            size={32}
+            className="transition-transform group-hover:rotate-[8deg]"
+          />
+          <span className="font-mono text-lg font-semibold tracking-tight sm:text-xl">
+            stack<span className="text-[var(--color-brand-500)]">square</span>
+          </span>
         </Link>
         <nav className="flex items-center gap-7 text-base">
           {links.map((l) => (

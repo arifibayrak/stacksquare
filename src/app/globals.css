@@ -30,14 +30,22 @@ html {
 
 body {
   font-family: var(--font-geist-sans);
-  background: var(--color-paper);
+  background-color: var(--color-paper);
   color: var(--color-ink);
+  background-image:
+    linear-gradient(to right, rgba(26, 26, 26, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(26, 26, 26, 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  background-position: -1px -1px;
 }
 
 @media (prefers-color-scheme: dark) {
   body {
-    background: #0d0d0d;
+    background-color: #0d0d0d;
     color: #ededed;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   }
 }
 
