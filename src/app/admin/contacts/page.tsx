@@ -100,7 +100,7 @@ export default async function ContactsPage({
             {list.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-zinc-500">
-                  No contacts yet —{" "}
+                  No contacts yet.{" "}
                   <Link
                     href="/admin/contacts/new"
                     className="text-brand-600 hover:underline"
@@ -139,10 +139,10 @@ export default async function ContactsPage({
                     </span>
                   </td>
                   <td className="px-4 py-3 capitalize text-zinc-600 dark:text-zinc-400">
-                    {c.owner ?? "—"}
+                    {c.owner ?? "·"}
                   </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                    {c.nextAction ?? "—"}
+                    {c.nextAction ?? "·"}
                   </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
                     {formatDate(c.nextActionDue)}

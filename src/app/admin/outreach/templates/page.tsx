@@ -49,7 +49,7 @@ export default async function TemplatesPage() {
           </h2>
           {list.length === 0 ? (
             <p className="mt-4 text-sm text-zinc-500">
-              No templates yet. Start with a warm DM template — short, ends
+              No templates yet. Start with a warm DM template that is short, ends
               with a Calendly link and 2 proposed slots.
             </p>
           ) : (

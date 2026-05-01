@@ -5,7 +5,7 @@ import { SiteNav, SiteFooter } from "@/components/site-nav";
 import { formatDate } from "@/lib/utils";
 
 export const metadata = {
-  title: "Episodes — StackSquare",
+  title: "Episodes · StackSquare",
 };
 
 export const dynamic = "force-dynamic";

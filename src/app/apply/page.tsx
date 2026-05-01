@@ -1,7 +1,7 @@
 import { SiteNav, SiteFooter } from "@/components/site-nav";
 import { SubmissionForm } from "@/components/submission-form";
 
-export const metadata = { title: "Apply — StackSquare" };
+export const metadata = { title: "Apply · StackSquare" };
 
 export default function ApplyPage() {
   return (
@@ -15,7 +15,7 @@ export default function ApplyPage() {
           Apply for the fireside
         </h1>
         <p className="mt-4 text-zinc-600 dark:text-zinc-400">
-          We&rsquo;re building a curated room of 10&ndash;15 ambitious peers.
+          We&rsquo;re building a curated room of 10 to 15 ambitious peers.
           Tell us who you are and what you&rsquo;d add.
         </p>
 

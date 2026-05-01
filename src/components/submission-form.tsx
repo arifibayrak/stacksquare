@@ -48,7 +48,7 @@ export function SubmissionForm({
   if (status === "ok") {
     return (
       <div className="rounded-md border border-green-200 bg-green-50 p-6 text-sm text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-100">
-        Thanks — we&rsquo;ll be in touch.
+        Thanks. We&rsquo;ll be in touch.
       </div>
     );
   }

@@ -1,6 +1,6 @@
 import { AdminSidebar } from "@/components/admin/sidebar";
 
-export const metadata = { title: "Admin — StackSquare" };
+export const metadata = { title: "Admin · StackSquare" };
 
 export default function AdminLayout({
   children,

@@ -9,30 +9,24 @@ const links = [
 
 export function SiteNav() {
   return (
-    <header className="border-b border-zinc-200 dark:border-zinc-800">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+    <header>
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-7 sm:py-9">
         <Link
           href="/"
-          className="font-mono text-sm font-semibold tracking-tight"
+          className="font-mono text-base font-semibold tracking-tight text-[var(--color-ink)]"
         >
-          stack<span className="text-brand-500">square</span>
+          stack<span className="text-[var(--color-brand-500)]">square</span>
         </Link>
-        <nav className="flex items-center gap-6 text-sm">
+        <nav className="flex items-center gap-7 text-base">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              className="text-[var(--color-ink-soft)] transition-colors hover:text-[var(--color-ink)]"
             >
               {l.label}
             </Link>
           ))}
-          <Link
-            href="/apply"
-            className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-          >
-            Apply
-          </Link>
         </nav>
       </div>
     </header>
@@ -41,19 +35,53 @@ export function SiteNav() {
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-zinc-200 dark:border-zinc-800">
-      <div className="mx-auto max-w-6xl px-6 py-10 text-sm text-zinc-500">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} StackSquare</p>
-          <div className="flex gap-4">
-            <Link href="/contact" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-              Contact
-            </Link>
-            <Link href="/guest" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-              Pitch a guest
-            </Link>
+    <footer className="mt-32 border-t border-[var(--color-rule)]">
+      <div className="mx-auto max-w-6xl space-y-10 px-6 py-14 text-base text-[var(--color-ink-muted)]">
+        <div className="grid gap-10 sm:grid-cols-2">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.18em]">
+              Arif İsmail Bayrak
+            </p>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
+              <a
+                href="mailto:arif@stacksquare.ai"
+                className="text-[var(--color-ink)] hover:opacity-70"
+              >
+                arif@stacksquare.ai
+              </a>
+              <a
+                href="https://www.linkedin.com/in/arifismailbayrak"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-[var(--color-ink)]"
+              >
+                LinkedIn ↗
+              </a>
+            </div>
+          </div>
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.18em]">
+              Kerem Ozkefeli
+            </p>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
+              <a
+                href="mailto:kerem@stacksquare.ai"
+                className="text-[var(--color-ink)] hover:opacity-70"
+              >
+                kerem@stacksquare.ai
+              </a>
+              <a
+                href="https://www.linkedin.com/in/keremozkefeli"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-[var(--color-ink)]"
+              >
+                LinkedIn ↗
+              </a>
+            </div>
           </div>
         </div>
+
       </div>
     </footer>
   );

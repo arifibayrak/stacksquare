@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SiteNav, SiteFooter } from "@/components/site-nav";
 
-export const metadata = { title: "Fireside — StackSquare" };
+export const metadata = { title: "Fireside · StackSquare" };
 
 export default function FiresidePage() {
   return (
@@ -15,8 +15,9 @@ export default function FiresidePage() {
           The Fireside Series
         </h1>
         <p className="mt-6 text-lg text-zinc-600 dark:text-zinc-400">
-          A curated room of 10–15 ambitious peers — students, junior bankers,
-          consultants, founders — joined occasionally by a senior guest. One
+          A curated room of 10 to 15 ambitious peers (students, junior
+          bankers, consultants, founders), joined occasionally by a senior
+          guest. One
           theme per episode, one pre-read, no script.
         </p>
         <p className="mt-4 text-zinc-600 dark:text-zinc-400">

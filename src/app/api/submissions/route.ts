@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       await resend.emails.send({
         from: env.resendFrom(),
         to: notify,
-        subject: `New ${parsed.kind} submission — StackSquare`,
+        subject: `New ${parsed.kind} submission · StackSquare`,
         html: `<h2>${parsed.kind} submission</h2>${fields}<p>Triage in /admin.</p>`,
       });
     } catch (err) {

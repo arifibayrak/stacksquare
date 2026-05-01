@@ -2,7 +2,7 @@ import { db, contacts, episodes } from "@/db";
 import { eq, inArray } from "drizzle-orm";
 import { SiteNav, SiteFooter } from "@/components/site-nav";
 
-export const metadata = { title: "Guests — StackSquare" };
+export const metadata = { title: "Guests · StackSquare" };
 export const dynamic = "force-dynamic";
 
 export default async function GuestsPage() {
@@ -27,7 +27,7 @@ export default async function GuestsPage() {
         </p>
 
         {guests.length === 0 ? (
-          <p className="mt-12 text-zinc-500">No guests yet — soon.</p>
+          <p className="mt-12 text-zinc-500">No guests yet, soon.</p>
         ) : (
           <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {guests.map((g) => (

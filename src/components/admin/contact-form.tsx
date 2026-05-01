@@ -1,12 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
-import type { Contact } from "@/db";
+import type { Contact } from "@/db/schema";
 import { createContact, updateContact } from "@/lib/actions/contacts";
-import { STAGES, STAGE_LABELS } from "@/db";
+import { STAGES, STAGE_LABELS } from "@/db/schema";
 
 const SENIORITY: Array<[string, string]> = [
-  ["", "—"],
+  ["", "·"],
   ["peer", "Peer"],
   ["mid", "Mid"],
   ["senior", "Senior"],
@@ -14,9 +14,9 @@ const SENIORITY: Array<[string, string]> = [
 ];
 
 const RELATIONSHIP: Array<[string, string]> = [
-  ["", "—"],
-  ["warm_1st", "Warm — 1st degree"],
-  ["warm_2nd", "Warm — 2nd degree"],
+  ["", "·"],
+  ["warm_1st", "Warm, 1st degree"],
+  ["warm_2nd", "Warm, 2nd degree"],
   ["cold", "Cold"],
 ];
 
@@ -27,7 +27,7 @@ const PRIORITY: Array<[string, string]> = [
 ];
 
 const OWNER: Array<[string, string]> = [
-  ["", "—"],
+  ["", "·"],
   ["arif", "Arif"],
   ["kerem", "Kerem"],
   ["both", "Both"],

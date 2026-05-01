@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { createEpisode, updateEpisode } from "@/lib/actions/episodes";
-import { EPISODE_STATUSES, EPISODE_STATUS_LABELS, type Episode } from "@/db";
+import { EPISODE_STATUSES, EPISODE_STATUS_LABELS, type Episode } from "@/db/schema";
 
 export function EpisodeForm({
   episode,
@@ -34,7 +34,7 @@ export function EpisodeForm({
             defaultValue={episode?.guestId ?? ""}
             className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
-            <option value="">— none —</option>
+            <option value="">none</option>
             {guests.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name}
@@ -72,7 +72,7 @@ export function EpisodeForm({
           label="Record location"
           name="recordLocation"
           defaultValue={episode?.recordLocation ?? ""}
-          placeholder="In person — London / Riverside"
+          placeholder="In person, London / Riverside"
         />
         <Field
           label="Publish date"

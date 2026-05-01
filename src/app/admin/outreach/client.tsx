@@ -103,7 +103,7 @@ export function OutreachComposer({
               onChange={(e) => setTemplateId(e.target.value)}
               className="flex-1 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
             >
-              <option value="">— none —</option>
+              <option value="">none</option>
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}

@@ -12,8 +12,8 @@ import {
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
-import type { Contact } from "@/db";
-import { STAGES, STAGE_LABELS } from "@/db";
+import type { Contact } from "@/db/schema";
+import { STAGES, STAGE_LABELS } from "@/db/schema";
 import { moveContactStage } from "@/lib/actions/contacts";
 
 type Stage = (typeof STAGES)[number];

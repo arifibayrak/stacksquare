@@ -22,15 +22,15 @@ export default async function ClipsPage() {
         Clip suggestions
       </h1>
       <p className="mt-1 text-sm text-zinc-500">
-        Claude scans an episode transcript and pulls 4–6 punchy 45–90 second
-        moments.
+        Claude scans an episode transcript and pulls 4 to 6 punchy clips of
+        45 to 90 seconds.
       </p>
 
       <div className="mt-8 max-w-4xl">
         <ClipsClient
           episodes={list.map((e) => ({
             id: e.id,
-            label: `${e.title}${e.guestName ? " — " + e.guestName : ""}`,
+            label: `${e.title}${e.guestName ? " · " + e.guestName : ""}`,
           }))}
         />
       </div>

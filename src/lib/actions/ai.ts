@@ -84,8 +84,8 @@ export async function draftOutreach(opts: {
 
   const voiceGuide =
     opts.voice === "kerem"
-      ? "Voice: Kerem — strategy/PE/consulting background, ran 2000+ Dialectica expert calls. Polished, slightly formal."
-      : "Voice: Arif — VC/AI/founder background, Imperial MSc. Direct, curious, builder-energy.";
+      ? "Voice: Kerem. Strategy/PE/consulting background, ran 2000+ Dialectica expert calls. Polished, slightly formal."
+      : "Voice: Arif. VC/AI/founder background, Imperial MSc. Direct, curious, builder-energy.";
 
   const out = await generateText({
     model: anthropic(MODEL_FAST()),

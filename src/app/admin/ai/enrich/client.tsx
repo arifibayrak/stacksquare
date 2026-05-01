@@ -108,7 +108,7 @@ export function EnrichClient() {
             >
               new contact
             </a>{" "}
-            (manual paste — wiring auto-create is a future iteration).
+            (manual paste; wiring auto-create is a future iteration).
           </p>
         </div>
       )}

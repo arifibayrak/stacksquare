@@ -1,7 +1,7 @@
 import { SiteNav, SiteFooter } from "@/components/site-nav";
 import { SubmissionForm } from "@/components/submission-form";
 
-export const metadata = { title: "Pitch a guest — StackSquare" };
+export const metadata = { title: "Pitch a guest · StackSquare" };
 
 export default function GuestPitchPage() {
   return (
