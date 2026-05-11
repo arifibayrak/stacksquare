@@ -7,11 +7,11 @@ export const metadata = { title: "Admin · StackSquare" };
 
 // Server-side auth gate. Every /admin/* request lands here.
 // 1. No session -> redirect to /sign-in.
-// 2. Session but email is not @stacksquare.ai -> render an inline
-//    "not authorized" screen with a sign-out button.
+// 2. Session but email is not on the explicit allowlist -> render an
+//    inline "not authorized" screen with a sign-out button.
 export const dynamic = "force-dynamic";
 
-const ALLOWED_DOMAIN = "stacksquare.ai";
+const ALLOWED_EMAILS = ["arif@stacksquare.ai", "kerem@stacksquare.ai"] as const;
 
 export default async function AdminLayout({
   children,
@@ -24,8 +24,8 @@ export default async function AdminLayout({
   }
 
   const user = await currentUser();
-  const email = user?.primaryEmailAddress?.emailAddress ?? "";
-  const allowed = email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`);
+  const email = (user?.primaryEmailAddress?.emailAddress ?? "").toLowerCase();
+  const allowed = (ALLOWED_EMAILS as readonly string[]).includes(email);
 
   if (!allowed) {
     return (
@@ -35,12 +35,12 @@ export default async function AdminLayout({
             Not authorized
           </p>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-4xl">
-            Admin is restricted to {ALLOWED_DOMAIN} accounts.
+            Admin is restricted to the StackSquare founders.
           </h1>
           <p className="mt-6 text-base leading-relaxed text-[var(--color-ink-soft)]">
             You are signed in as{" "}
             <strong className="text-[var(--color-ink)]">{email || "an unknown account"}</strong>.
-            Sign out and try with a {ALLOWED_DOMAIN} email.
+            Sign out and try with {ALLOWED_EMAILS.join(" or ")}.
           </p>
           <SignOutButton redirectUrl="/sign-in">
             <button
