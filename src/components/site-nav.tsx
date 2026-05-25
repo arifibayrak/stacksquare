@@ -2,10 +2,9 @@ import Link from "next/link";
 import { LogoMark } from "@/components/logo-mark";
 
 const links = [
-  { href: "/episodes", label: "Episodes" },
-  { href: "/guests", label: "Guests" },
-  { href: "/fireside", label: "Fireside" },
+  { href: "/grill-me", label: "Grill Me" },
   { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function SiteNav() {

@@ -22,11 +22,12 @@ const sections = [
     ],
   },
   {
-    label: "Content",
-    links: [
-      { href: "/admin/episodes", label: "Episodes" },
-      { href: "/admin/submissions", label: "Submissions" },
-    ],
+    label: "Events",
+    links: [{ href: "/admin/events", label: "Events" }],
+  },
+  {
+    label: "Inbox",
+    links: [{ href: "/admin/submissions", label: "Submissions" }],
   },
   {
     label: "AI",

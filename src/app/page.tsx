@@ -1,13 +1,18 @@
+import Link from "next/link";
 import { SiteNav, SiteFooter } from "@/components/site-nav";
+import { EventCard } from "@/components/event-card";
+import { getPublishedEvents } from "@/lib/events";
 
-const PILLARS = [
+export const dynamic = "force-dynamic";
+
+const LENSES = [
   {
     n: "01",
     title: "Technology Stack",
     summary:
-      "The systems and tooling that run the business beneath the strategy.",
+      "The systems and tooling that run a business beneath the strategy.",
     extract:
-      "Architecture choices, build versus buy decisions, and the tooling tradeoffs that shape how the work actually gets done.",
+      "Architecture choices, build versus buy, and the tooling tradeoffs that shape how the work actually gets done.",
   },
   {
     n: "02",
@@ -35,14 +40,19 @@ const PILLARS = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { upcoming, past } = await getPublishedEvents();
+  const showingUpcoming = upcoming.length > 0;
+  const highlights = (showingUpcoming ? upcoming : past).slice(0, 3);
+
   return (
     <>
       <SiteNav />
       <main className="mx-auto max-w-6xl px-6">
         <section className="py-28 sm:py-40">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-            A 2-on-1 conversation series. Imperial Business School.
+            Events for founders, investors, and operators. Imperial Business
+            School.
           </p>
           <h1 className="mt-8 max-w-4xl text-4xl font-semibold leading-[1.1] tracking-tight text-[var(--color-ink)] text-balance sm:text-5xl lg:text-6xl">
             Strategy meets capital.
@@ -54,22 +64,72 @@ export default function HomePage() {
             </span>
           </h1>
           <p className="mt-10 max-w-2xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
-            Two MSc students. One professional per conversation. Each guest
-            mapped to four lenses: technology stack, capital structure,
+            StackSquare convenes the people who build, fund, and advise serious
+            businesses. Fireside rooms, expert sessions, and peer gatherings,
+            each mapped to four lenses: technology stack, capital structure,
             strategic planning, and psychology.
           </p>
+          <div className="mt-10 flex flex-wrap items-center gap-4">
+            <Link
+              href="/grill-me"
+              className="rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-opacity hover:opacity-85"
+            >
+              See the sessions
+            </Link>
+            <Link
+              href="/about"
+              className="text-base text-[var(--color-ink-soft)] underline decoration-[var(--color-rule)] underline-offset-4 transition-colors hover:text-[var(--color-ink)]"
+            >
+              About StackSquare
+            </Link>
+          </div>
         </section>
 
-        <section className="py-24 sm:py-32">
+        {highlights.length > 0 && (
+          <section
+            id="sessions"
+            className="border-t border-[var(--color-rule)] py-24 sm:py-32"
+          >
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+                  {showingUpcoming ? "Upcoming" : "Recent sessions"}
+                </p>
+                <h2 className="mt-6 max-w-3xl text-3xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-5xl">
+                  {showingUpcoming
+                    ? "What is coming up next."
+                    : "What we covered lately."}
+                </h2>
+              </div>
+              <Link
+                href="/grill-me"
+                className="text-base text-[var(--color-brand-600)] underline decoration-[var(--color-rule)] underline-offset-4 transition-colors hover:decoration-[var(--color-brand-600)]"
+              >
+                All sessions ↗
+              </Link>
+            </div>
+            <div className="mt-12 space-y-12">
+              {highlights.map((e) => (
+                <EventCard
+                  key={e.id}
+                  event={e}
+                  variant={showingUpcoming ? "upcoming" : "past"}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="border-t border-[var(--color-rule)] py-24 sm:py-32">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
             The four lenses
           </p>
           <h2 className="mt-6 max-w-3xl text-3xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-5xl">
-            Every conversation. Every guest.
+            Every event. Every speaker.
           </h2>
 
           <div className="mt-16 grid gap-12 sm:grid-cols-2 sm:gap-x-16 sm:gap-y-14">
-            {PILLARS.map((p) => (
+            {LENSES.map((p) => (
               <article key={p.n} className="border-t border-[var(--color-rule)] pt-6">
                 <p className="font-mono text-sm tabular-nums text-[var(--color-ink-muted)]">
                   {p.n}
@@ -88,9 +148,10 @@ export default function HomePage() {
           </div>
 
           <p className="mt-20 max-w-3xl text-lg leading-relaxed text-[var(--color-ink-soft)]">
-            Each interview maps these four onto the guest&rsquo;s domain. The
-            output is a clean, lean explanation of the terms, frameworks, and
-            decisions that define their work.
+            Every session maps these four onto a real operator&rsquo;s domain.
+            The result is a clean, lean read on the terms, frameworks, and
+            decisions that define their work, in a room small enough to ask the
+            real questions.
           </p>
         </section>
 
@@ -104,11 +165,12 @@ export default function HomePage() {
                 Format A
               </p>
               <h3 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-3xl">
-                2-on-1 expert interviews
+                Expert sessions
               </h3>
               <p className="mt-4 text-lg leading-relaxed text-[var(--color-ink-soft)]">
-                45 to 60 minute recordings with founders, investors, and
-                operators. Edited to long form, plus four to six sharp clips.
+                One founder, investor, or operator in conversation with the
+                room. 45 to 60 minutes on how they actually build, fund, and
+                decide, with time for the questions that matter.
               </p>
             </article>
             <article>
@@ -116,13 +178,22 @@ export default function HomePage() {
                 Format B
               </p>
               <h3 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-3xl">
-                Fireside chat series
+                Fireside rooms
               </h3>
               <p className="mt-4 text-lg leading-relaxed text-[var(--color-ink-soft)]">
                 Ten to fifteen ambitious peers, an optional senior guest, one
-                theme per episode. The room you&rsquo;d want to be in.
+                theme per evening. Small, sharp, and built for the conversations
+                you cannot have on a stage.
               </p>
             </article>
+          </div>
+          <div className="mt-16">
+            <Link
+              href="/grill-me"
+              className="rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-opacity hover:opacity-85"
+            >
+              See the sessions
+            </Link>
           </div>
         </section>
       </main>

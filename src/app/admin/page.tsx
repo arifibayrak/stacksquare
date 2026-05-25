@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { db, contacts, episodes, submissions, STAGES } from "@/db";
-import { sql, isNull, and, lte, ne } from "drizzle-orm";
+import { db, contacts, events, submissions, STAGES } from "@/db";
+import { sql, isNull, and, lte, ne, gte, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -63,21 +63,21 @@ async function getCounts() {
       ),
     );
 
-  const [epsInProgress] = await db
+  const [upcoming] = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(episodes)
-    .where(ne(episodes.status, "published"));
+    .from(events)
+    .where(and(eq(events.status, "published"), gte(events.startAt, new Date())));
 
   return {
     map,
     pendingSubs: pendingSubs?.count ?? 0,
     overdue: overdue?.count ?? 0,
-    epsInProgress: epsInProgress?.count ?? 0,
+    upcomingEvents: upcoming?.count ?? 0,
   };
 }
 
 export default async function AdminDashboard() {
-  const { map, pendingSubs, overdue, epsInProgress } = await getCounts();
+  const { map, pendingSubs, overdue, upcomingEvents } = await getCounts();
 
   const total = STAGES.reduce((sum, s) => sum + (map.get(s) ?? 0), 0);
 
@@ -105,9 +105,9 @@ export default async function AdminDashboard() {
           tone={pendingSubs > 0 ? "warn" : "default"}
         />
         <Stat
-          label="Episodes in progress"
-          value={epsInProgress}
-          href="/admin/episodes"
+          label="Upcoming events"
+          value={upcomingEvents}
+          href="/admin/events"
         />
       </div>
 

@@ -22,6 +22,9 @@ export const env = {
       .map((s) => s.trim())
       .filter(Boolean),
   siteUrl: () => process.env.NEXT_PUBLIC_SITE_URL ?? "https://stacksquare.ai",
+  // Luma calendar id (e.g. "cal-xxxxxxxx") or a full embed URL. Used as the
+  // default events source until an admin-managed value overrides it (Phase 2).
+  lumaCalendarId: () => process.env.NEXT_PUBLIC_LUMA_CALENDAR_ID ?? null,
   modelFast: () => process.env.ANTHROPIC_MODEL_FAST ?? FAST_DEFAULT,
   modelDeep: () => process.env.ANTHROPIC_MODEL_DEEP ?? DEEP_DEFAULT,
 };

@@ -17,13 +17,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "StackSquare · Strategy meets Capital",
   description:
-    "Two Imperial MSc students bridging strategy and capital. Unfiltered conversations with the people who build, fund, and advise the businesses we want to learn from.",
+    "StackSquare convenes founders, investors, and operators. Fireside rooms, expert sessions, and peer gatherings where strategy, capital, stack, and psychology meet. Register on Luma.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://stacksquare.ai",
   ),
   openGraph: {
     title: "StackSquare",
-    description: "Strategy meets capital. A 2-on-1 podcast.",
+    description:
+      "Events for founders, investors, and operators. Strategy meets capital.",
     url: "https://stacksquare.ai",
     siteName: "StackSquare",
     type: "website",

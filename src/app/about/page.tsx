@@ -44,10 +44,10 @@ export default function AboutPage() {
           Built between strategy and capital.
         </h1>
         <p className="mt-8 max-w-2xl text-xl leading-relaxed text-[var(--color-ink-soft)] sm:text-2xl">
-          StackSquare is a 2-on-1 conversation series built by two MSc
-          Economics &amp; Strategy students at Imperial Business School. We
-          map every guest to the four lenses: technology stack, capital,
-          strategy, psychology.
+          StackSquare is an events organization built by two MSc Economics
+          &amp; Strategy students at Imperial Business School. We convene
+          founders, investors, and operators, and map every session to the
+          four lenses: technology stack, capital, strategy, psychology.
         </p>
 
         <div className="mt-20 space-y-16">
@@ -72,7 +72,7 @@ export default function AboutPage() {
                 workflows. Boğaziçi MIS alumnus.
               </p>
               <p className="mt-3 text-lg leading-relaxed text-[var(--color-ink-soft)]">
-                On the show, Arif leads the capital lens: the numbers, deals,
+                At our events, Arif leads the capital lens: the numbers, deals,
                 financing, and growth mechanics.
               </p>
               <FounderLinks
@@ -103,7 +103,7 @@ export default function AboutPage() {
                 a minor in Psychology. Koç School alumnus.
               </p>
               <p className="mt-3 text-lg leading-relaxed text-[var(--color-ink-soft)]">
-                On the show, Kerem leads the strategy and psychology lenses:
+                At our events, Kerem leads the strategy and psychology lenses:
                 frameworks, decisions, tradeoffs, and how operators actually
                 think.
               </p>
@@ -119,10 +119,10 @@ export default function AboutPage() {
               Why this exists
             </p>
             <p className="mt-4 text-lg leading-relaxed text-[var(--color-ink-soft)]">
-              Most student podcasts are pure finance or pure careers. We sit
+              Most student events are pure finance or pure careers. We sit
               between strategy and capital, with a peer-and-pro hybrid format.
-              The 2-on-1 dynamic forces sharper conversations. Guests
-              don&rsquo;t get to coast.
+              Small rooms force sharper conversations. Speakers don&rsquo;t get
+              to coast.
             </p>
           </section>
         </div>

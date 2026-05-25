@@ -7,6 +7,7 @@ import {
   timestamp,
   date,
   jsonb,
+  boolean,
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
@@ -71,6 +72,12 @@ export const aiRunKindEnum = pgEnum("ai_run_kind", [
   "draft_outreach",
   "summarize_transcript",
   "clip_suggestions",
+]);
+
+export const eventStatusEnum = pgEnum("event_status", [
+  "draft",
+  "published",
+  "archived",
 ]);
 
 export const contacts = pgTable(
@@ -246,6 +253,48 @@ export const subscribers = pgTable(
   (t) => [uniqueIndex("subscribers_email_idx").on(t.email)],
 );
 
+export const events = pgTable(
+  "events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    slug: text("slug").notNull().unique(),
+    summary: text("summary"),
+    // Public lu.ma event page used for the register / deep link.
+    lumaUrl: text("luma_url"),
+    // Optional Luma event id, used for the checkout-button embed widget.
+    lumaEventId: text("luma_event_id"),
+    startAt: timestamp("start_at", { withTimezone: true }),
+    location: text("location"),
+    coverImage: text("cover_image"),
+    status: eventStatusEnum("status").default("draft").notNull(),
+    featured: boolean("featured").default(false).notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    // Internal-only planning notes, never shown on the public site.
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("events_status_idx").on(t.status),
+    index("events_start_idx").on(t.startAt),
+  ],
+);
+
+// Simple key/value store for editable site settings (e.g. the Luma calendar id)
+// so operators can change them from /admin without a redeploy.
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const aiRuns = pgTable("ai_runs", {
   id: uuid("id").defaultRandom().primaryKey(),
   kind: aiRunKindEnum("kind").notNull(),
@@ -269,6 +318,10 @@ export type NewEpisode = typeof episodes.$inferInsert;
 export type TouchLog = typeof touchLog.$inferSelect;
 export type OutreachTemplate = typeof outreachTemplates.$inferSelect;
 export type Submission = typeof submissions.$inferSelect;
+// Named EventItem (not Event) to avoid shadowing the DOM `Event` global.
+export type EventItem = typeof events.$inferSelect;
+export type NewEventItem = typeof events.$inferInsert;
+export type AppSetting = typeof appSettings.$inferSelect;
 
 export const STAGES = [
   "identified",
@@ -314,3 +367,17 @@ export const EPISODE_STATUS_LABELS: Record<
   edited: "Edited",
   published: "Published",
 };
+
+export const EVENT_STATUSES = ["draft", "published", "archived"] as const;
+
+export const EVENT_STATUS_LABELS: Record<
+  (typeof EVENT_STATUSES)[number],
+  string
+> = {
+  draft: "Draft",
+  published: "Published",
+  archived: "Archived",
+};
+
+// app_settings key for the public Luma calendar source.
+export const SETTING_LUMA_CALENDAR = "luma_calendar";
