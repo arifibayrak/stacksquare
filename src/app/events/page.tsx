@@ -1,3 +1,4 @@
+import Script from "next/script";
 import { SiteNav, SiteFooter } from "@/components/site-nav";
 import { EventCard } from "@/components/event-card";
 import { getPublishedEvents } from "@/lib/events";
@@ -69,6 +70,12 @@ export default async function EventsPage() {
         )}
       </main>
       <SiteFooter />
+      {/* Powers the Luma "Register for Event" checkout buttons on event cards. */}
+      <Script
+        id="luma-checkout"
+        src="https://embed.lu.ma/checkout-button.js"
+        strategy="afterInteractive"
+      />
     </>
   );
 }

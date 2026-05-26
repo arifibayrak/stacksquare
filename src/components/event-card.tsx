@@ -39,7 +39,18 @@ export function EventCard({
         </p>
       ) : null}
 
-      {event.lumaUrl ? (
+      {variant === "upcoming" && event.lumaEventId ? (
+        // Luma checkout button: opens the in-page register popup once
+        // checkout-button.js has loaded; falls back to the event page on click.
+        <a
+          href={event.lumaUrl ?? `https://luma.com/event/${event.lumaEventId}`}
+          className="luma-checkout--button mt-5 inline-flex w-fit items-center rounded-md bg-[var(--color-ink)] px-5 py-2.5 text-base font-medium text-[var(--color-paper)] transition-opacity hover:opacity-85"
+          data-luma-action="checkout"
+          data-luma-event-id={event.lumaEventId}
+        >
+          Register for Event
+        </a>
+      ) : event.lumaUrl ? (
         <a
           href={event.lumaUrl}
           target="_blank"
