@@ -71,7 +71,7 @@ export default async function HomePage() {
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-4">
             <Link
-              href="/grill-me"
+              href="/events"
               className="rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-opacity hover:opacity-85"
             >
               See the sessions
@@ -102,7 +102,7 @@ export default async function HomePage() {
                 </h2>
               </div>
               <Link
-                href="/grill-me"
+                href="/events"
                 className="text-base text-[var(--color-brand-600)] underline decoration-[var(--color-rule)] underline-offset-4 transition-colors hover:decoration-[var(--color-brand-600)]"
               >
                 All sessions ↗
@@ -189,7 +189,7 @@ export default async function HomePage() {
           </div>
           <div className="mt-16">
             <Link
-              href="/grill-me"
+              href="/events"
               className="rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-opacity hover:opacity-85"
             >
               See the sessions

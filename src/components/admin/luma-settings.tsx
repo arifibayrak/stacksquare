@@ -33,7 +33,7 @@ export function LumaSettings({
       <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
         Luma calendar id (e.g. cal-xxxxxxxx) or a full embed URL. This is the
         calendar embedded below for your team. Public visitors see the curated
-        cards on /grill-me, not this calendar.
+        cards on /events, not this calendar.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <input

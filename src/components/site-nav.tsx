@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LogoMark } from "@/components/logo-mark";
 
 const links = [
-  { href: "/grill-me", label: "Grill Me" },
+  { href: "/events", label: "Events" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];

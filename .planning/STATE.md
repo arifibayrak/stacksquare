@@ -13,7 +13,9 @@
 
 - Luma calendar embed moved from the public site **into `/admin/events`** (calendar
   `cal-n7SwFY8KZTFPZTL`, set as `NEXT_PUBLIC_LUMA_CALENDAR_ID` in `.env.local`).
-- Public events page renamed `/events` -> **`/grill-me`**, now showing published `events`
+- Public events page briefly renamed `/events` -> `/grill-me`, then renamed BACK to
+  **`/events`** (2026-05-26) with neutral copy; "Grill Me" freed for an AI skill elsewhere.
+  It shows published `events`
   rows as cards (upcoming + past), not a Luma iframe. Homepage shows up to 3 highlights.
 - New: `src/lib/events.ts` (getPublishedEvents), `src/components/event-card.tsx`,
   `src/app/grill-me/`. Removed: `src/app/events/`, `src/lib/luma.ts` (dead). `LumaEmbed`

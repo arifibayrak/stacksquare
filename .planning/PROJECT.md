@@ -19,11 +19,12 @@ branded front door and the private operations layer.
 
 1. **Luma = embed (admin-side), public = curated cards.** No Luma API key, no event sync to
    Neon. The Luma calendar (`cal-n7SwFY8KZTFPZTL`) is embedded **inside `/admin/events`** for
-   the team to track registrations. The **public** surface is `/grill-me`, which renders the
+   the team to track registrations. The **public** surface is `/events`, which renders the
    curated `events` rows from Neon as branded cards (upcoming + past recaps), each optionally
-   linking out to its Luma page. (Revised 2026-05-25: originally the public `/events` page
-   embedded the Luma calendar; the user moved the embed to admin and renamed the public page
-   to `/grill-me` showing finished/active sessions as cards.)
+   linking out to its Luma page. (Revised 2026-05-25: originally `/events` embedded the Luma
+   calendar; the embed moved to admin and the public page briefly became `/grill-me`. Revised
+   again 2026-05-26: renamed back to `/events` with neutral copy. "Grill Me" was freed up for
+   use as an AI skill elsewhere, not built in this repo.)
 2. **Podcast content removed.** Public routes `/episodes`, `/episodes/[slug]`, `/guests`,
    `/guest`, `/fireside`, `/apply` are deleted. `/about`, `/contact`, auth routes stay.
 3. **CRM kept, Events admin added.** `contacts` / `pipeline` / `outreach` / `ai` /

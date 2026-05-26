@@ -65,7 +65,7 @@ export default async function EventsAdminPage() {
         <p className="mt-1 text-xs text-zinc-500">
           What is scheduled on Luma. Registrations are managed there. Mirror the
           ones worth showcasing into the cards below so they appear on
-          /grill-me.
+          /events.
         </p>
         <div className="mt-3 max-w-3xl">
           <LumaEmbed source={calendarSource} minHeight={500} />

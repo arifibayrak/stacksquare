@@ -49,7 +49,7 @@ function parseStartAt(v: string | null | undefined): Date | null {
 
 function revalidatePublic() {
   revalidatePath("/");
-  revalidatePath("/grill-me");
+  revalidatePath("/events");
 }
 
 export async function createEvent(formData: FormData) {

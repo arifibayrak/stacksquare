@@ -5,12 +5,12 @@ import { getPublishedEvents } from "@/lib/events";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Grill Me · StackSquare",
+  title: "Events · StackSquare",
   description:
-    "Grill Me sessions from StackSquare. Founders, investors, and operators put to the four lenses. Upcoming dates and past sessions.",
+    "Upcoming and past StackSquare events. Founders, investors, and operators across the four lenses: technology stack, capital, strategy, and psychology.",
 };
 
-export default async function GrillMePage() {
+export default async function EventsPage() {
   const { upcoming, past } = await getPublishedEvents();
   const hasAny = upcoming.length > 0 || past.length > 0;
 
@@ -20,14 +20,14 @@ export default async function GrillMePage() {
       <main className="mx-auto max-w-4xl px-6">
         <section className="py-24 sm:py-32">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-            Grill Me
+            Events
           </p>
           <h1 className="mt-8 max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight text-[var(--color-ink)] text-balance sm:text-5xl lg:text-6xl">
-            We put one operator to the four lenses.
+            The room you want to be in.
           </h1>
           <p className="mt-10 max-w-2xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
-            Every session, one founder, investor, or operator gets grilled
-            across technology stack, capital, strategy, and psychology. Here is
+            Each session puts one founder, investor, or operator to the four
+            lenses: technology stack, capital, strategy, and psychology. Here is
             what is coming up and what already happened.
           </p>
         </section>
