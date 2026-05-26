@@ -79,6 +79,12 @@ Events organization for Arif Bayrak and Kerem Ozkefeli (MSc Economics & Strategy
 
 - `pnpm dev` — local Turbopack dev server on http://localhost:3000
 - `pnpm typecheck` — `tsc --noEmit`
+- **⚠️ One shared database.** `.env.local` (local/dev) and the Vercel Production env currently
+  point at the **same** Neon database (`ep-late-sky-anr7plo7-...`). There is no dev/prod data
+  separation: local `/admin` edits, seeds, and `db:push` all hit **production** data, and the
+  public site reads the same rows. Treat any local admin/seed action as a production change. For
+  true separation, create a Neon branch and point `.env.local` at it. Do not seed placeholder
+  rows expecting them to stay local.
 - `pnpm db:push` — push Drizzle schema to the dev DB. The DB URL lives in `.env.local` (there is no `.env`), and `drizzle.config.ts` only loads `.env` via `dotenv/config`, so prefix the push: `pnpm dlx dotenv-cli -e .env.local -- pnpm db:push`. For prod: `vercel env pull .env.production.local --environment=production && pnpm dlx dotenv-cli -e .env.production.local -- pnpm db:push`.
   - **Caveat:** `drizzle-kit push` opens an interactive TUI prompt (needs a TTY) whenever it must resolve enum/table renames, which fails in a non-interactive agent shell. When adding purely-additive objects (new enum/table/column), run `db:push` yourself in a real terminal, or apply the additive DDL directly against `DATABASE_URL` (idempotent `CREATE TYPE`/`CREATE TABLE IF NOT EXISTS`). The project is push-only (no `drizzle/` migrations folder); do not commit generated baseline migrations.
 - `pnpm db:studio` — open Drizzle Studio against the local DB
