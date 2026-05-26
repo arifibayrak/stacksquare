@@ -34,7 +34,6 @@ const sections = [
     links: [
       { href: "/admin/ai/enrich", label: "Enrich contact" },
       { href: "/admin/ai/draft", label: "Draft outreach" },
-      { href: "/admin/ai/clips", label: "Clip suggestions" },
     ],
   },
 ];

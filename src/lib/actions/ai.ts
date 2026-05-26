@@ -5,13 +5,12 @@ import { generateText, Output } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { eq } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
-import { db, contacts, episodes, aiRuns } from "@/db";
+import { db, contacts, aiRuns } from "@/db";
 import { env } from "@/lib/env";
 
 // Model IDs come from env (see src/lib/env.ts). Defaults match the
 // @ai-sdk/anthropic AnthropicMessagesModelId union format.
 const MODEL_FAST = () => env.modelFast();
-const MODEL_DEEP = () => env.modelDeep();
 
 async function requireUser() {
   const { userId } = await auth();
@@ -40,11 +39,11 @@ export async function enrichFromText(rawText: string) {
     model: anthropic(MODEL_FAST()),
     output: Output.object({ schema: EnrichOut }),
     system:
-      "You are a research assistant for StackSquare, a 2-on-1 podcast at the intersection of strategy and capital (consulting/PE/VC/startups/AI). " +
-      "Given a LinkedIn profile or pasted bio, extract structured fields and assess fit for the show. " +
+      "You are a research assistant for StackSquare, an events organization at the intersection of strategy and capital (consulting/PE/VC/startups/AI). " +
+      "Given a LinkedIn profile or pasted bio, extract structured fields and assess fit as an event speaker. " +
       "Be concise. expertise should be 3-6 short tags like 'vc', 'fintech', 'b2b-saas'. " +
-      "fitScore is 1-10 (10 = perfect guest). " +
-      "suggestedAngles: 2-3 specific angles for a 18-22 min interview.",
+      "fitScore is 1-10 (10 = perfect speaker). " +
+      "suggestedAngles: 2-3 specific angles for a live session.",
     prompt: rawText,
   });
 
@@ -90,7 +89,7 @@ export async function draftOutreach(opts: {
   const out = await generateText({
     model: anthropic(MODEL_FAST()),
     system:
-      "You write outreach for StackSquare, a 2-on-1 podcast at the intersection of strategy and capital. " +
+      "You write outreach for StackSquare, an events organization at the intersection of strategy and capital. " +
       voiceGuide +
       " " +
       channelGuide +
@@ -118,50 +117,4 @@ export async function draftOutreach(opts: {
   });
 
   return { ok: true as const, text: out.text };
-}
-
-const ClipsOut = z.object({
-  clips: z
-    .array(
-      z.object({
-        title: z.string(),
-        timestamp: z.string(),
-        durationSec: z.number().int().min(30).max(120),
-        hook: z.string(),
-        why: z.string(),
-      }),
-    )
-    .min(1)
-    .max(8),
-});
-
-export async function clipSuggestions(episodeId: string) {
-  await requireUser();
-  const [ep] = await db
-    .select()
-    .from(episodes)
-    .where(eq(episodes.id, episodeId))
-    .limit(1);
-  if (!ep) throw new Error("Episode not found");
-  if (!ep.transcript) throw new Error("No transcript on this episode");
-
-  const { output } = await generateText({
-    model: anthropic(MODEL_DEEP()),
-    output: Output.object({ schema: ClipsOut }),
-    system:
-      "You find punchy 45-90 second clips inside a podcast transcript. " +
-      "Pick moments that are surprising, contrarian, quotable, or reveal a clear framework. " +
-      "Avoid throat-clearing, repeated points, and meta-commentary about the show itself.",
-    prompt: `Transcript:\n\n${ep.transcript.slice(0, 60000)}\n\nReturn 4-6 clip candidates ranked by punch.`,
-  });
-
-  await db.insert(aiRuns).values({
-    kind: "clip_suggestions",
-    episodeId: ep.id,
-    input: { transcriptLength: ep.transcript.length },
-    output,
-    model: MODEL_DEEP(),
-  });
-
-  return { ok: true as const, data: output };
 }

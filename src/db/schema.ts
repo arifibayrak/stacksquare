@@ -52,15 +52,6 @@ export const channelEnum = pgEnum("channel", [
   "other",
 ]);
 
-export const episodeStatusEnum = pgEnum("episode_status", [
-  "idea",
-  "booked",
-  "researched",
-  "recorded",
-  "edited",
-  "published",
-]);
-
 export const submissionKindEnum = pgEnum("submission_kind", [
   "apply",
   "guest",
@@ -128,7 +119,6 @@ export const contactsRelations = relations(contacts, ({ one, many }) => ({
   introductions: many(contacts, { relationName: "introductions" }),
   touchLog: many(touchLog),
   outreachLog: many(outreachLog),
-  episodes: many(episodes),
 }));
 
 export const touchLog = pgTable("touch_log", {
@@ -150,39 +140,6 @@ export const touchLog = pgTable("touch_log", {
 export const touchLogRelations = relations(touchLog, ({ one }) => ({
   contact: one(contacts, {
     fields: [touchLog.contactId],
-    references: [contacts.id],
-  }),
-}));
-
-export const episodes = pgTable("episodes", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  guestId: uuid("guest_id").references(() => contacts.id),
-  title: text("title").notNull(),
-  slug: text("slug").notNull().unique(),
-  status: episodeStatusEnum("status").default("idea").notNull(),
-  recordDate: date("record_date"),
-  recordLocation: text("record_location"),
-  publishDate: date("publish_date"),
-  youtubeId: text("youtube_id"),
-  spotifyUrl: text("spotify_url"),
-  mdxPath: text("mdx_path"),
-  durationMin: integer("duration_min"),
-  shortClipsCount: integer("short_clips_count").default(0),
-  showNotes: text("show_notes"),
-  transcript: text("transcript"),
-  researchDoc: text("research_doc"),
-  questionOutline: text("question_outline"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
-
-export const episodesRelations = relations(episodes, ({ one }) => ({
-  guest: one(contacts, {
-    fields: [episodes.guestId],
     references: [contacts.id],
   }),
 }));
@@ -299,7 +256,6 @@ export const aiRuns = pgTable("ai_runs", {
   id: uuid("id").defaultRandom().primaryKey(),
   kind: aiRunKindEnum("kind").notNull(),
   contactId: uuid("contact_id").references(() => contacts.id),
-  episodeId: uuid("episode_id").references(() => episodes.id),
   input: jsonb("input").notNull(),
   output: jsonb("output"),
   model: text("model").notNull(),
@@ -313,8 +269,6 @@ export const aiRuns = pgTable("ai_runs", {
 
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
-export type Episode = typeof episodes.$inferSelect;
-export type NewEpisode = typeof episodes.$inferInsert;
 export type TouchLog = typeof touchLog.$inferSelect;
 export type OutreachTemplate = typeof outreachTemplates.$inferSelect;
 export type Submission = typeof submissions.$inferSelect;
@@ -345,27 +299,6 @@ export const STAGE_LABELS: Record<(typeof STAGES)[number], string> = {
   published: "Published",
   long_term: "Long-term",
   dormant: "Dormant",
-};
-
-export const EPISODE_STATUSES = [
-  "idea",
-  "booked",
-  "researched",
-  "recorded",
-  "edited",
-  "published",
-] as const;
-
-export const EPISODE_STATUS_LABELS: Record<
-  (typeof EPISODE_STATUSES)[number],
-  string
-> = {
-  idea: "Idea",
-  booked: "Booked",
-  researched: "Researched",
-  recorded: "Recorded",
-  edited: "Edited",
-  published: "Published",
 };
 
 export const EVENT_STATUSES = ["draft", "published", "archived"] as const;
