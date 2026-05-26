@@ -216,10 +216,7 @@ export const events = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     title: text("title").notNull(),
     slug: text("slug").notNull().unique(),
-    // Short teaser shown as the card lead.
     summary: text("summary"),
-    // Full event details (speakers, agenda, etc.), shown below the summary.
-    description: text("description"),
     // Public lu.ma event page used for the register / deep link.
     lumaUrl: text("luma_url"),
     // Optional Luma event id, used for the checkout-button embed widget.
