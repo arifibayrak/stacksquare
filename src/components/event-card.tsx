@@ -34,8 +34,14 @@ export function EventCard({
       </h3>
 
       {event.summary ? (
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--color-ink-soft)]">
+        <p className="mt-3 max-w-2xl text-base font-medium leading-relaxed text-[var(--color-ink)]">
           {event.summary}
+        </p>
+      ) : null}
+
+      {event.description ? (
+        <p className="mt-3 max-w-2xl whitespace-pre-line text-base leading-relaxed text-[var(--color-ink-soft)]">
+          {event.description}
         </p>
       ) : null}
 

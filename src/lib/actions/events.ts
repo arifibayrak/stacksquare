@@ -17,6 +17,7 @@ import { slugify } from "@/lib/utils";
 const EventInput = z.object({
   title: z.string().min(1),
   summary: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
   lumaUrl: z.string().optional().nullable(),
   lumaEventId: z.string().optional().nullable(),
   startAt: z.string().optional().nullable(),
@@ -66,6 +67,7 @@ export async function createEvent(formData: FormData) {
       title: parsed.title,
       slug,
       summary: parsed.summary ?? null,
+      description: parsed.description ?? null,
       lumaUrl: parsed.lumaUrl ?? null,
       lumaEventId: parsed.lumaEventId ?? null,
       startAt: parseStartAt(parsed.startAt),
@@ -92,6 +94,7 @@ export async function updateEvent(id: string, formData: FormData) {
     .set({
       title: parsed.title,
       summary: parsed.summary ?? null,
+      description: parsed.description ?? null,
       lumaUrl: parsed.lumaUrl ?? null,
       lumaEventId: parsed.lumaEventId ?? null,
       startAt: parseStartAt(parsed.startAt),

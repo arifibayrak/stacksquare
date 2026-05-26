@@ -56,6 +56,17 @@ export function EventForm({ event }: { event?: EventItem }) {
         placeholder="One or two lines shown on the public site."
       />
 
+      <Textarea
+        label="Description"
+        name="description"
+        defaultValue={event?.description ?? ""}
+        rows={8}
+        mono={false}
+        placeholder={
+          "Full details shown below the summary on the card. Line breaks are preserved.\n\nSpeakers\n...\n\nAgenda\n18:45  Arrivals"
+        }
+      />
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
           label="Date & time"
