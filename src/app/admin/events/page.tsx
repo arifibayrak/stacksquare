@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, count, desc, eq } from "drizzle-orm";
 import {
   db,
+  contacts,
   events,
+  venues,
   appSettings,
   EVENT_STATUSES,
   EVENT_STATUS_LABELS,
@@ -28,6 +30,27 @@ export default async function EventsAdminPage() {
     .limit(1);
 
   const calendarSource = setting?.value?.trim() || env.lumaCalendarId();
+
+  const venueRows = await db
+    .select({
+      id: venues.id,
+      name: venues.name,
+      area: venues.area,
+      capacity: venues.capacity,
+      typicalCost: venues.typicalCost,
+      contactName: contacts.name,
+    })
+    .from(venues)
+    .leftJoin(contacts, eq(venues.contactId, contacts.id))
+    .orderBy(asc(venues.name));
+
+  const eventCountsByVenue = await db
+    .select({ venueId: events.venueId, n: count() })
+    .from(events)
+    .groupBy(events.venueId);
+  const venueEventCount = new Map(
+    eventCountsByVenue.map((r) => [r.venueId, r.n]),
+  );
 
   const grouped = EVENT_STATUSES.map((status) => ({
     status,
@@ -117,6 +140,54 @@ export default async function EventsAdminPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-12">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Venues</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Internal address book of places we can run events. Never shown
+              publicly.
+            </p>
+          </div>
+          <Link
+            href="/admin/venues/new"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:border-brand-500 dark:border-zinc-700"
+          >
+            + New venue
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {venueRows.map((v) => (
+            <Link
+              key={v.id}
+              href={`/admin/venues/${v.id}`}
+              className="rounded-lg border border-[var(--color-rule)] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:border-brand-500 dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="truncate font-medium">{v.name}</p>
+                <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] tabular-nums text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                  {venueEventCount.get(v.id) ?? 0} events
+                </span>
+              </div>
+              <p className="mt-1.5 truncate font-mono text-[10px] text-zinc-400">
+                {v.area ?? "No area"}
+                {v.capacity ? ` · cap ${v.capacity}` : ""}
+              </p>
+              <p className="mt-1 truncate text-xs text-zinc-500">
+                {v.typicalCost ?? ""}
+                {v.typicalCost && v.contactName ? " · " : ""}
+                {v.contactName ?? ""}
+              </p>
+            </Link>
+          ))}
+          {venueRows.length === 0 && (
+            <p className="text-sm text-zinc-400">
+              No venues yet. Add the places you can book.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

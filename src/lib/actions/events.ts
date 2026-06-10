@@ -8,11 +8,13 @@ import { auth } from "@clerk/nextjs/server";
 import {
   db,
   events,
+  eventTasks,
   appSettings,
   EVENT_STATUSES,
   SETTING_LUMA_CALENDAR,
 } from "@/db";
 import { slugify } from "@/lib/utils";
+import { DEFAULT_EVENT_TASKS } from "@/lib/event-task-defaults";
 
 const EventInput = z.object({
   title: z.string().min(1),
@@ -26,6 +28,14 @@ const EventInput = z.object({
   featured: z.coerce.boolean().default(false),
   sortOrder: z.coerce.number().int().default(0),
   notes: z.string().optional().nullable(),
+  venueId: z.string().uuid().optional().nullable(),
+  targetHeadcount: z.preprocess(
+    (v) => (v === null || v === "" || v === undefined ? null : Number(v)),
+    z.number().int().nullable(),
+  ),
+  catering: z.string().optional().nullable(),
+  avSetup: z.string().optional().nullable(),
+  runOfShow: z.string().optional().nullable(),
 });
 
 function emptyToNull<T extends Record<string, unknown>>(o: T): T {
@@ -75,8 +85,22 @@ export async function createEvent(formData: FormData) {
       featured: parsed.featured,
       sortOrder: parsed.sortOrder,
       notes: parsed.notes ?? null,
+      venueId: parsed.venueId ?? null,
+      targetHeadcount: parsed.targetHeadcount,
+      catering: parsed.catering ?? null,
+      avSetup: parsed.avSetup ?? null,
+      runOfShow: parsed.runOfShow ?? null,
     })
     .returning();
+  // Seed the standard process checklist; delete what does not apply.
+  await db.insert(eventTasks).values(
+    DEFAULT_EVENT_TASKS.map((t, i) => ({
+      eventId: row.id,
+      section: t.section,
+      title: t.title,
+      sortOrder: i,
+    })),
+  );
   revalidatePath("/admin/events");
   revalidatePublic();
   redirect(`/admin/events/${row.id}`);
@@ -101,6 +125,11 @@ export async function updateEvent(id: string, formData: FormData) {
       featured: parsed.featured,
       sortOrder: parsed.sortOrder,
       notes: parsed.notes ?? null,
+      venueId: parsed.venueId ?? null,
+      targetHeadcount: parsed.targetHeadcount,
+      catering: parsed.catering ?? null,
+      avSetup: parsed.avSetup ?? null,
+      runOfShow: parsed.runOfShow ?? null,
       updatedAt: new Date(),
     })
     .where(eq(events.id, id));

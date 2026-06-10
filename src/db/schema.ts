@@ -71,6 +71,35 @@ export const eventStatusEnum = pgEnum("event_status", [
   "archived",
 ]);
 
+export const eventTargetStatusEnum = pgEnum("event_target_status", [
+  "to_invite",
+  "invited",
+  "registered",
+  "attended",
+  "no_show",
+]);
+
+export const speakerStatusEnum = pgEnum("speaker_status", [
+  "idea",
+  "invited",
+  "confirmed",
+  "declined",
+]);
+
+export const eventTaskSectionEnum = pgEnum("event_task_section", [
+  "prep",
+  "logistics",
+  "followup",
+]);
+
+export const costCategoryEnum = pgEnum("cost_category", [
+  "venue",
+  "catering",
+  "speaker",
+  "marketing",
+  "other",
+]);
+
 export const contacts = pgTable(
   "contacts",
   {
@@ -210,6 +239,32 @@ export const subscribers = pgTable(
   (t) => [uniqueIndex("subscribers_email_idx").on(t.email)],
 );
 
+// Internal venue address book. Never rendered on the public site; the
+// public-facing place string stays in events.location.
+export const venues = pgTable("venues", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  // Neighborhood or street address, e.g. "South Kensington, London".
+  area: text("area"),
+  capacity: integer("capacity"),
+  // Free text, e.g. "Free for students" or "GBP 200 per evening".
+  typicalCost: text("typical_cost"),
+  url: text("url"),
+  // Venue relationship lives in the CRM when possible...
+  contactId: uuid("contact_id").references(() => contacts.id, {
+    onDelete: "set null",
+  }),
+  // ...with a free-text fallback for one-off venue managers.
+  contactFallback: text("contact_fallback"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const events = pgTable(
   "events",
   {
@@ -229,6 +284,15 @@ export const events = pgTable(
     sortOrder: integer("sort_order").default(0).notNull(),
     // Internal-only planning notes, never shown on the public site.
     notes: text("notes"),
+    // Internal planning: linked venue plus the fixed logistics core.
+    // None of these render publicly.
+    venueId: uuid("venue_id").references(() => venues.id, {
+      onDelete: "set null",
+    }),
+    targetHeadcount: integer("target_headcount"),
+    catering: text("catering"),
+    avSetup: text("av_setup"),
+    runOfShow: text("run_of_show"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -240,6 +304,98 @@ export const events = pgTable(
     index("events_status_idx").on(t.status),
     index("events_start_idx").on(t.startAt),
   ],
+);
+
+// Budget line items per event, amounts in GBP pence.
+export const eventCosts = pgTable(
+  "event_costs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    category: costCategoryEnum("category").default("other").notNull(),
+    estimatedPence: integer("estimated_pence"),
+    // Null until the money is actually spent.
+    actualPence: integer("actual_pence"),
+    paidBy: ownerEnum("paid_by"),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("event_costs_event_idx").on(t.eventId)],
+);
+
+export const eventSpeakers = pgTable(
+  "event_speakers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    contactId: uuid("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    // Free text: "speaker", "moderator", "panelist".
+    role: text("role"),
+    status: speakerStatusEnum("status").default("idea").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("event_speakers_event_idx").on(t.eventId)],
+);
+
+// Targeted network per event: who we want in the room and where they
+// stand in the invite lifecycle.
+export const eventTargets = pgTable(
+  "event_targets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    contactId: uuid("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    status: eventTargetStatusEnum("status").default("to_invite").notNull(),
+    note: text("note"),
+    // Stamped by the batch follow-up flow on the event page.
+    followedUpAt: timestamp("followed_up_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("event_targets_event_contact_idx").on(t.eventId, t.contactId),
+    index("event_targets_event_idx").on(t.eventId),
+  ],
+);
+
+// Process checklist rows; prep / logistics / followup are filtered views
+// of this one table. New events are seeded with a default checklist.
+export const eventTasks = pgTable(
+  "event_tasks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    section: eventTaskSectionEnum("section").notNull(),
+    title: text("title").notNull(),
+    owner: ownerEnum("owner"),
+    dueDate: date("due_date"),
+    done: boolean("done").default(false).notNull(),
+    note: text("note"),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("event_tasks_event_idx").on(t.eventId)],
 );
 
 // Simple key/value store for editable site settings (e.g. the Luma calendar id)
@@ -276,6 +432,12 @@ export type Submission = typeof submissions.$inferSelect;
 export type EventItem = typeof events.$inferSelect;
 export type NewEventItem = typeof events.$inferInsert;
 export type AppSetting = typeof appSettings.$inferSelect;
+export type Venue = typeof venues.$inferSelect;
+export type NewVenue = typeof venues.$inferInsert;
+export type EventCost = typeof eventCosts.$inferSelect;
+export type EventSpeaker = typeof eventSpeakers.$inferSelect;
+export type EventTarget = typeof eventTargets.$inferSelect;
+export type EventTask = typeof eventTasks.$inferSelect;
 
 export const STAGES = [
   "identified",
@@ -310,6 +472,80 @@ export const EVENT_STATUS_LABELS: Record<
   draft: "Draft",
   published: "Published",
   archived: "Archived",
+};
+
+export const EVENT_TARGET_STATUSES = [
+  "to_invite",
+  "invited",
+  "registered",
+  "attended",
+  "no_show",
+] as const;
+
+export const EVENT_TARGET_STATUS_LABELS: Record<
+  (typeof EVENT_TARGET_STATUSES)[number],
+  string
+> = {
+  to_invite: "To invite",
+  invited: "Invited",
+  registered: "Registered",
+  attended: "Attended",
+  no_show: "No-show",
+};
+
+export const SPEAKER_STATUSES = [
+  "idea",
+  "invited",
+  "confirmed",
+  "declined",
+] as const;
+
+export const SPEAKER_STATUS_LABELS: Record<
+  (typeof SPEAKER_STATUSES)[number],
+  string
+> = {
+  idea: "Idea",
+  invited: "Invited",
+  confirmed: "Confirmed",
+  declined: "Declined",
+};
+
+export const EVENT_TASK_SECTIONS = ["prep", "logistics", "followup"] as const;
+
+export const EVENT_TASK_SECTION_LABELS: Record<
+  (typeof EVENT_TASK_SECTIONS)[number],
+  string
+> = {
+  prep: "Prep",
+  logistics: "Logistics",
+  followup: "Follow-up",
+};
+
+export const COST_CATEGORIES = [
+  "venue",
+  "catering",
+  "speaker",
+  "marketing",
+  "other",
+] as const;
+
+export const COST_CATEGORY_LABELS: Record<
+  (typeof COST_CATEGORIES)[number],
+  string
+> = {
+  venue: "Venue",
+  catering: "Catering",
+  speaker: "Speaker",
+  marketing: "Marketing",
+  other: "Other",
+};
+
+export const OWNERS = ["arif", "kerem", "both"] as const;
+
+export const OWNER_LABELS: Record<(typeof OWNERS)[number], string> = {
+  arif: "Arif",
+  kerem: "Kerem",
+  both: "Both",
 };
 
 // app_settings key for the public Luma calendar source.

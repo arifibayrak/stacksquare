@@ -23,7 +23,10 @@ const sections = [
   },
   {
     label: "Events",
-    links: [{ href: "/admin/events", label: "Events" }],
+    links: [
+      { href: "/admin/events", label: "Events" },
+      { href: "/admin/venues", label: "Venues" },
+    ],
   },
   {
     label: "Inbox",

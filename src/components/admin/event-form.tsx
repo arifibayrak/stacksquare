@@ -18,7 +18,13 @@ function toDatetimeLocal(d: Date | string | null | undefined): string {
   return new Date(date.getTime() - off).toISOString().slice(0, 16);
 }
 
-export function EventForm({ event }: { event?: EventItem }) {
+export function EventForm({
+  event,
+  venues = [],
+}: {
+  event?: EventItem;
+  venues?: { id: string; name: string; capacity: number | null }[];
+}) {
   const [pending, start] = useTransition();
   const editing = !!event;
 
@@ -119,6 +125,60 @@ export function EventForm({ event }: { event?: EventItem }) {
             />
             Featured on homepage
           </label>
+        </div>
+      </div>
+
+      <div id="venue" className="scroll-mt-20">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+          Venue and logistics (internal)
+        </p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Venue
+            </label>
+            <select
+              name="venueId"
+              defaultValue={event?.venueId ?? ""}
+              className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              <option value="">No venue linked</option>
+              {venues.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                  {v.capacity ? ` (cap ${v.capacity})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Field
+            label="Target headcount"
+            name="targetHeadcount"
+            type="number"
+            defaultValue={event?.targetHeadcount?.toString() ?? ""}
+            placeholder="40"
+          />
+          <Field
+            label="Catering plan"
+            name="catering"
+            defaultValue={event?.catering ?? ""}
+            placeholder="Pizza and soft drinks, ordered by Kerem"
+          />
+          <Field
+            label="AV / room setup"
+            name="avSetup"
+            defaultValue={event?.avSetup ?? ""}
+            placeholder="Two mics, projector, fireside seating"
+          />
+        </div>
+        <div className="mt-4">
+          <Textarea
+            label="Run of show"
+            name="runOfShow"
+            defaultValue={event?.runOfShow ?? ""}
+            rows={4}
+            placeholder={"18:00 doors\n18:30 fireside\n19:15 Q&A\n19:30 mingling"}
+          />
         </div>
       </div>
 

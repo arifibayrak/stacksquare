@@ -1,11 +1,37 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { eq } from "drizzle-orm";
-import { db, events, EVENT_STATUS_LABELS } from "@/db";
+import { asc, eq } from "drizzle-orm";
+import {
+  db,
+  contacts,
+  events,
+  eventCosts,
+  eventSpeakers,
+  eventTargets,
+  eventTasks,
+  outreachTemplates,
+  venues,
+  EVENT_STATUS_LABELS,
+} from "@/db";
 import { EventForm } from "@/components/admin/event-form";
+import { CostsSection } from "@/components/admin/event-plan/costs-section";
+import { SpeakersSection } from "@/components/admin/event-plan/speakers-section";
+import { TargetsSection } from "@/components/admin/event-plan/targets-section";
+import { TasksSection } from "@/components/admin/event-plan/tasks-section";
+import { FollowUpSection } from "@/components/admin/event-plan/followup-section";
 import { DeleteEventButton } from "./client";
 
 export const dynamic = "force-dynamic";
+
+const NAV = [
+  { href: "#details", label: "Details" },
+  { href: "#venue", label: "Venue" },
+  { href: "#costs", label: "Costs" },
+  { href: "#speakers", label: "Speakers" },
+  { href: "#targets", label: "Targets" },
+  { href: "#tasks", label: "Tasks" },
+  { href: "#followup", label: "Follow-up" },
+];
 
 export default async function EventDetail({
   params,
@@ -19,6 +45,108 @@ export default async function EventDetail({
     .where(eq(events.id, id))
     .limit(1);
   if (!event) notFound();
+
+  const [
+    venueList,
+    contactOptions,
+    costs,
+    speakerRows,
+    targetRows,
+    taskRows,
+    templates,
+  ] = await Promise.all([
+    db
+      .select({ id: venues.id, name: venues.name, capacity: venues.capacity })
+      .from(venues)
+      .orderBy(asc(venues.name)),
+    db
+      .select({
+        id: contacts.id,
+        name: contacts.name,
+        company: contacts.company,
+      })
+      .from(contacts)
+      .orderBy(asc(contacts.name)),
+    db
+      .select()
+      .from(eventCosts)
+      .where(eq(eventCosts.eventId, id))
+      .orderBy(asc(eventCosts.createdAt)),
+    db
+      .select({
+        id: eventSpeakers.id,
+        contactId: eventSpeakers.contactId,
+        name: contacts.name,
+        company: contacts.company,
+        role: eventSpeakers.role,
+        status: eventSpeakers.status,
+      })
+      .from(eventSpeakers)
+      .innerJoin(contacts, eq(eventSpeakers.contactId, contacts.id))
+      .where(eq(eventSpeakers.eventId, id))
+      .orderBy(asc(eventSpeakers.createdAt)),
+    db
+      .select({
+        id: eventTargets.id,
+        contactId: eventTargets.contactId,
+        name: contacts.name,
+        company: contacts.company,
+        email: contacts.email,
+        status: eventTargets.status,
+        followedUpAt: eventTargets.followedUpAt,
+      })
+      .from(eventTargets)
+      .innerJoin(contacts, eq(eventTargets.contactId, contacts.id))
+      .where(eq(eventTargets.eventId, id))
+      .orderBy(asc(contacts.name)),
+    db
+      .select()
+      .from(eventTasks)
+      .where(eq(eventTasks.eventId, id))
+      .orderBy(asc(eventTasks.sortOrder), asc(eventTasks.createdAt)),
+    db
+      .select({
+        id: outreachTemplates.id,
+        name: outreachTemplates.name,
+        channel: outreachTemplates.channel,
+        subject: outreachTemplates.subject,
+        body: outreachTemplates.body,
+      })
+      .from(outreachTemplates)
+      .orderBy(asc(outreachTemplates.name)),
+  ]);
+
+  const linkedVenue = event.venueId
+    ? await db
+        .select()
+        .from(venues)
+        .where(eq(venues.id, event.venueId))
+        .limit(1)
+        .then((r) => r[0])
+    : undefined;
+
+  const targets = targetRows.map((t) => ({
+    id: t.id,
+    contactId: t.contactId,
+    name: t.name,
+    company: t.company,
+    status: t.status,
+    followedUp: !!t.followedUpAt,
+  }));
+
+  const attendees = targetRows
+    .filter((t) => t.status === "attended")
+    .map((t) => ({
+      targetId: t.id,
+      name: t.name,
+      hasEmail: !!t.email,
+      followedUp: !!t.followedUpAt,
+    }));
+
+  const overCapacity =
+    linkedVenue?.capacity &&
+    event.targetHeadcount &&
+    event.targetHeadcount > linkedVenue.capacity;
 
   return (
     <div className="px-8 py-10">
@@ -56,8 +184,75 @@ export default async function EventDetail({
         <DeleteEventButton id={event.id} />
       </div>
 
-      <div className="mt-10 max-w-4xl">
-        <EventForm event={event} />
+      <nav className="sticky top-0 z-20 -mx-8 mt-6 border-b border-[var(--color-rule)] bg-[var(--color-paper)]/95 px-8 py-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+        <div className="flex flex-wrap gap-1">
+          {NAV.map((n) => (
+            <a
+              key={n.href}
+              href={n.href}
+              className="rounded-md px-2.5 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+            >
+              {n.label}
+            </a>
+          ))}
+        </div>
+      </nav>
+
+      <div id="details" className="mt-10 max-w-4xl scroll-mt-20">
+        <EventForm event={event} venues={venueList} />
+      </div>
+
+      {linkedVenue && (
+        <div className="mt-6 max-w-4xl rounded-lg border border-[var(--color-rule)] bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Link
+              href={`/admin/venues/${linkedVenue.id}`}
+              className="font-medium hover:text-brand-600"
+            >
+              {linkedVenue.name} ↗
+            </Link>
+            {linkedVenue.area && (
+              <span className="text-zinc-500">{linkedVenue.area}</span>
+            )}
+            {linkedVenue.capacity && (
+              <span className="text-zinc-500">
+                capacity {linkedVenue.capacity}
+              </span>
+            )}
+            {linkedVenue.typicalCost && (
+              <span className="text-zinc-500">{linkedVenue.typicalCost}</span>
+            )}
+            {overCapacity ? (
+              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                Target headcount {event.targetHeadcount} exceeds capacity
+              </span>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-12 max-w-4xl space-y-12 pb-24">
+        <CostsSection
+          eventId={event.id}
+          costs={costs}
+          targetHeadcount={event.targetHeadcount}
+        />
+        <SpeakersSection
+          eventId={event.id}
+          speakers={speakerRows}
+          contacts={contactOptions}
+        />
+        <TargetsSection
+          eventId={event.id}
+          targets={targets}
+          contacts={contactOptions}
+        />
+        <TasksSection eventId={event.id} tasks={taskRows} />
+        <FollowUpSection
+          eventId={event.id}
+          attendees={attendees}
+          templates={templates}
+        />
       </div>
     </div>
   );
