@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import Link from "next/link";
 import Script from "next/script";
 import { PublicShell } from "@/components/public-shell";
@@ -59,59 +61,71 @@ function TickerRow() {
 export default async function HomePage() {
   const { upcoming, past } = await getPublishedEvents();
   const recentPast = past.slice(0, 3);
+  // Drop a file at public/hero-bg.mp4 and it plays behind the hero.
+  const hasHeroVideo = existsSync(
+    path.join(process.cwd(), "public", "hero-bg.mp4"),
+  );
 
   return (
     <PublicShell>
       <main>
-        <section className="mx-auto max-w-6xl px-6">
-          <div className="py-12 sm:py-16">
-            <div>
-              <h1 className="font-display text-[clamp(2.3rem,5vw,4rem)] font-medium leading-[1.06] text-[var(--color-ink)]">
-                <MaskedLine delay={0.12}>Strategy meets capital.</MaskedLine>
-                <MaskedLine delay={0.24}>Stack meets psychology.</MaskedLine>
-                <MaskedLine delay={0.36}>
-                  <span className="italic text-[var(--color-ink-muted)]">
-                    We meet in the{" "}
-                    <span className="text-[var(--color-brand-600)]">
-                      square
-                    </span>
-                    .
-                  </span>
-                </MaskedLine>
-              </h1>
-              <FadeIn delay={0.55}>
-                <p className="mt-8 max-w-xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
-                  stacksquare is an events organization for founders,
-                  investors, and operators. We host fireside chats, expert
-                  sessions, and peer gatherings in small rooms, and read every
-                  conversation through four lenses: stack, capital, strategy,
-                  and psychology.
-                </p>
-              </FadeIn>
-              <FadeIn delay={0.68}>
-                <div className="mt-9 flex flex-wrap items-center gap-4">
-                  <Link
-                    href="/events"
-                    className="group inline-flex items-center gap-2 rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
-                  >
-                    See the events
-                    <span
-                      aria-hidden
-                      className="transition-transform duration-300 group-hover:translate-x-1"
-                    >
-                      →
-                    </span>
-                  </Link>
-                  <Link
-                    href="/contact"
-                    className="draw-link text-base text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"
-                  >
-                    Get in the square
-                  </Link>
-                </div>
-              </FadeIn>
-
+        <section className="relative overflow-hidden">
+          {hasHeroVideo && (
+            <div aria-hidden className="absolute inset-0 motion-reduce:hidden">
+              <video
+                src="/hero-bg.mp4"
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="h-full w-full object-cover opacity-40"
+              />
+              {/* Keep the headline readable over the footage. */}
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,13,11,0.35)_0%,rgba(14,13,11,0.85)_100%)]" />
             </div>
+          )}
+          <div className="relative mx-auto max-w-4xl px-6 py-16 text-center sm:py-24">
+            <h1 className="font-display text-[clamp(2.3rem,5vw,4rem)] font-medium leading-[1.06] text-[var(--color-ink)]">
+              <MaskedLine delay={0.12}>Strategy meets capital.</MaskedLine>
+              <MaskedLine delay={0.24}>Stack meets psychology.</MaskedLine>
+              <MaskedLine delay={0.36}>
+                <span className="italic text-[var(--color-ink-muted)]">
+                  We meet in the{" "}
+                  <span className="text-[var(--color-brand-600)]">square</span>
+                  .
+                </span>
+              </MaskedLine>
+            </h1>
+            <FadeIn delay={0.55}>
+              <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
+                stacksquare is an events organization for founders, investors,
+                and operators. We host fireside chats, expert sessions, and
+                peer gatherings in small rooms, and read every conversation
+                through four lenses: stack, capital, strategy, and psychology.
+              </p>
+            </FadeIn>
+            <FadeIn delay={0.68}>
+              <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+                <Link
+                  href="/events"
+                  className="group inline-flex items-center gap-2 rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
+                >
+                  See the events
+                  <span
+                    aria-hidden
+                    className="transition-transform duration-300 group-hover:translate-x-1"
+                  >
+                    →
+                  </span>
+                </Link>
+                <Link
+                  href="/contact"
+                  className="draw-link text-base text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"
+                >
+                  Get in the square
+                </Link>
+              </div>
+            </FadeIn>
           </div>
         </section>
 
