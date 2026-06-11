@@ -20,6 +20,12 @@ const RELATIONSHIP: Array<[string, string]> = [
   ["cold", "Cold"],
 ];
 
+const CIRCLE: Array<[string, string]> = [
+  ["inner", "Inner circle (people we know)"],
+  ["reach", "Within reach (targeted)"],
+  ["moonshot", "Moonshot (globally amazing)"],
+];
+
 const PRIORITY: Array<[string, string]> = [
   ["p1", "P1"],
   ["p2", "P2"],
@@ -96,6 +102,12 @@ export function ContactForm({ contact }: { contact?: Contact }) {
           name="relationship"
           options={RELATIONSHIP}
           defaultValue={contact?.relationship ?? ""}
+        />
+        <Select
+          label="Circle"
+          name="circle"
+          options={CIRCLE}
+          defaultValue={contact?.circle ?? "reach"}
         />
         <Field
           label="Source"

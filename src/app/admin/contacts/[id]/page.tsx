@@ -60,6 +60,7 @@ export default async function ContactDetail({
           stage={contact.stage}
           priority={contact.priority}
           owner={contact.owner}
+          circle={contact.circle}
         />
       </div>
 

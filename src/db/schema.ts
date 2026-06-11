@@ -26,6 +26,14 @@ export const relationshipEnum = pgEnum("relationship", [
   "cold",
 ]);
 
+// Which ring of the network a contact sits in: people we already know,
+// realistic targets, and aspirational world-class names.
+export const circleEnum = pgEnum("contact_circle", [
+  "inner",
+  "reach",
+  "moonshot",
+]);
+
 export const stageEnum = pgEnum("stage", [
   "identified",
   "researched",
@@ -116,6 +124,7 @@ export const contacts = pgTable(
     seniority: seniorityEnum("seniority"),
     expertise: text("expertise").array().default([]).notNull(),
     relationship: relationshipEnum("relationship"),
+    circle: circleEnum("circle").default("reach").notNull(),
     source: text("source"),
     introducedById: uuid("introduced_by_id"),
     stage: stageEnum("stage").default("identified").notNull(),
@@ -465,6 +474,20 @@ export const STAGE_LABELS: Record<(typeof STAGES)[number], string> = {
   published: "Published",
   long_term: "Long-term",
   dormant: "Dormant",
+};
+
+export const CIRCLES = ["inner", "reach", "moonshot"] as const;
+
+export const CIRCLE_LABELS: Record<(typeof CIRCLES)[number], string> = {
+  inner: "Inner circle",
+  reach: "Within reach",
+  moonshot: "Moonshots",
+};
+
+export const CIRCLE_DESCRIPTIONS: Record<(typeof CIRCLES)[number], string> = {
+  inner: "People we know",
+  reach: "People we want to meet, targeted",
+  moonshot: "People we want to meet, globally amazing",
 };
 
 export const EVENT_STATUSES = ["draft", "published", "archived"] as const;

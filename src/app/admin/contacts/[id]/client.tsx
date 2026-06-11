@@ -7,20 +7,23 @@ import {
   moveContactStage,
   setContactPriority,
   setContactOwner,
+  setContactCircle,
 } from "@/lib/actions/contacts";
 import { QuickPill } from "@/components/admin/quick-pill";
-import { STAGES, STAGE_LABELS } from "@/db/schema";
+import { STAGES, STAGE_LABELS, CIRCLES, CIRCLE_LABELS } from "@/db/schema";
 
 export function ContactQuickActions({
   id,
   stage,
   priority,
   owner,
+  circle,
 }: {
   id: string;
   stage: (typeof STAGES)[number];
   priority: "p1" | "p2" | "p3" | null;
   owner: "arif" | "kerem" | "both" | null;
+  circle: (typeof CIRCLES)[number];
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -42,6 +45,14 @@ export function ContactQuickActions({
         ]}
         onChange={async (next) => {
           await setContactPriority(id, next as "p1" | "p2" | "p3");
+        }}
+      />
+      <QuickPill
+        label="Circle"
+        current={circle}
+        options={CIRCLES.map((c) => ({ value: c, label: CIRCLE_LABELS[c] }))}
+        onChange={async (next) => {
+          await setContactCircle(id, next as (typeof CIRCLES)[number]);
         }}
       />
       <QuickPill

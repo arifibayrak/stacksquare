@@ -11,6 +11,7 @@ const SENIORITY = ["peer", "mid", "senior", "c_suite"] as const;
 const RELATIONSHIP = ["warm_1st", "warm_2nd", "cold"] as const;
 const PRIORITY = ["p1", "p2", "p3"] as const;
 const OWNER = ["arif", "kerem", "both"] as const;
+const CIRCLES = ["inner", "reach", "moonshot"] as const;
 
 const ContactInput = z.object({
   name: z.string().min(1),
@@ -23,6 +24,7 @@ const ContactInput = z.object({
   seniority: z.enum(SENIORITY).optional().nullable(),
   expertise: z.array(z.string()).default([]),
   relationship: z.enum(RELATIONSHIP).optional().nullable(),
+  circle: z.enum(CIRCLES).default("reach"),
   source: z.string().optional().nullable(),
   stage: z.enum(STAGES).default("identified"),
   fitScore: z.coerce.number().int().min(1).max(10).optional().nullable(),
@@ -120,6 +122,21 @@ export async function setContactOwner(
       owner: owner === "" ? null : owner,
       updatedAt: new Date(),
     })
+    .where(eq(contacts.id, id));
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin/contacts");
+  revalidatePath(`/admin/contacts/${id}`);
+}
+
+export async function setContactCircle(
+  id: string,
+  circle: (typeof CIRCLES)[number],
+) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+  await db
+    .update(contacts)
+    .set({ circle, updatedAt: new Date() })
     .where(eq(contacts.id, id));
   revalidatePath("/admin/pipeline");
   revalidatePath("/admin/contacts");
