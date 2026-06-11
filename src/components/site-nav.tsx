@@ -37,7 +37,7 @@ export function SiteFooter() {
           </div>
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.18em]">
-              Kerem Ozkefeli
+              Kerem Özkefeli
             </p>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
               <a
