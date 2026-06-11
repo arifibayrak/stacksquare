@@ -56,6 +56,8 @@ export const submissionKindEnum = pgEnum("submission_kind", [
   "apply",
   "guest",
   "contact",
+  "speaker",
+  "partner",
 ]);
 
 export const aiRunKindEnum = pgEnum("ai_run_kind", [

@@ -3,7 +3,7 @@ import { InitialsAvatar } from "@/components/initials-avatar";
 import { FadeIn, MaskedLine, Reveal } from "@/components/motion/reveal";
 
 export const metadata = {
-  title: "About · StackSquare",
+  title: "About · stacksquare",
 };
 
 function FounderLinks({
@@ -66,7 +66,7 @@ export default function AboutPage() {
         </h1>
         <FadeIn delay={0.45}>
           <p className="mt-8 max-w-2xl text-xl leading-relaxed text-[var(--color-ink-soft)] sm:text-2xl">
-            StackSquare is an events organization built by two MSc Economics
+            stacksquare is an events organization built by two MSc Economics
             &amp; Strategy students at Imperial Business School. We convene
             founders, investors, and operators, and map every session to the
             four lenses: technology stack, capital, strategy, psychology.

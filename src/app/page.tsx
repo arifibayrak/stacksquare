@@ -97,7 +97,7 @@ export default async function HomePage() {
               </h1>
               <FadeIn delay={0.55}>
                 <p className="mt-10 max-w-2xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
-                  StackSquare convenes the people who build, fund, and advise
+                  stacksquare convenes the people who build, fund, and advise
                   serious businesses. Fireside rooms, expert sessions, and peer
                   gatherings, each mapped to four lenses: technology stack,
                   capital structure, strategic planning, and psychology.
@@ -121,7 +121,7 @@ export default async function HomePage() {
                     href="/about"
                     className="draw-link text-base text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"
                   >
-                    About StackSquare
+                    About stacksquare
                   </Link>
                 </div>
               </FadeIn>

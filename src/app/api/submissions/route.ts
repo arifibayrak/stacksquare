@@ -5,7 +5,7 @@ import { Resend } from "resend";
 import { env } from "@/lib/env";
 
 const Body = z.object({
-  kind: z.enum(["apply", "guest", "contact"]),
+  kind: z.enum(["apply", "guest", "contact", "speaker", "partner"]),
   payload: z.record(z.string(), z.unknown()),
 });
 
