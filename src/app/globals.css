@@ -173,43 +173,6 @@ h1, h2, h3 {
   }
 }
 
-/*
- * Ken Burns loops: continuous slow pan-and-zoom inside image frames so the
- * stills read like looping video. Four directional variants to desync cells.
- */
-@keyframes kenburns-a {
-  0% {
-    transform: scale(1.05) translate(0%, 0%);
-  }
-  100% {
-    transform: scale(1.18) translate(2.4%, -2%);
-  }
-}
-@keyframes kenburns-b {
-  0% {
-    transform: scale(1.18) translate(-2.2%, 1.6%);
-  }
-  100% {
-    transform: scale(1.05) translate(0%, 0%);
-  }
-}
-@keyframes kenburns-c {
-  0% {
-    transform: scale(1.06) translate(1.8%, 1.8%);
-  }
-  100% {
-    transform: scale(1.16) translate(-2%, -1.4%);
-  }
-}
-@keyframes kenburns-d {
-  0% {
-    transform: scale(1.16) translate(0%, -2.2%);
-  }
-  100% {
-    transform: scale(1.06) translate(-1.8%, 1.4%);
-  }
-}
-
 /* Slow breathing pulse for small square accents. */
 @keyframes pulse-soft {
   0%,

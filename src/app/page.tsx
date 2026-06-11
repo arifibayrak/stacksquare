@@ -1,9 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import Script from "next/script";
 import { PublicShell } from "@/components/public-shell";
 import { EventCard } from "@/components/event-card";
-import { HeroCollage } from "@/components/motion/hero-collage";
 import {
   FadeIn,
   MaskedLine,
@@ -14,19 +12,6 @@ import {
 import { getPublishedEvents } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
-
-const lensArtifacts = [
-  { src: "/lenses/tech.webp", alt: "Closeup of a blue circuit board" },
-  {
-    src: "/lenses/capital.jpg",
-    alt: "Investing newspaper page with a twenty dollar bill",
-  },
-  { src: "/lenses/strategy.jpg", alt: "Dictionary entry for strategy" },
-  {
-    src: "/lenses/psychology.webp",
-    alt: "Vintage anatomical brain engraving over dictionary print",
-  },
-];
 
 const formats = [
   {
@@ -79,7 +64,7 @@ export default async function HomePage() {
     <PublicShell>
       <main>
         <section className="mx-auto max-w-6xl px-6">
-          <div className="grid items-center gap-14 py-20 sm:py-24 lg:grid-cols-[1.05fr_auto] lg:gap-16 lg:py-24">
+          <div className="py-12 sm:py-16">
             <div>
               <h1 className="font-display text-[clamp(2.3rem,5vw,4rem)] font-medium leading-[1.06] text-[var(--color-ink)]">
                 <MaskedLine delay={0.12}>Strategy meets capital.</MaskedLine>
@@ -126,38 +111,7 @@ export default async function HomePage() {
                 </div>
               </FadeIn>
 
-              {/* Compact artifact strip on small screens; the collage takes over on lg. */}
-              <FadeIn delay={0.8} className="mt-14 lg:hidden">
-                <div className="grid grid-cols-4 gap-3">
-                  {lensArtifacts.map((a, i) => (
-                    <div
-                      key={a.src}
-                      className="relative aspect-[3/4] overflow-hidden rounded-[4px] border border-[var(--color-rule)]"
-                    >
-                      <div
-                        className={`absolute inset-0 ${
-                          [
-                            "animate-[kenburns-a_16s_ease-in-out_infinite_alternate]",
-                            "animate-[kenburns-b_19s_ease-in-out_infinite_alternate]",
-                            "animate-[kenburns-c_17s_ease-in-out_infinite_alternate]",
-                            "animate-[kenburns-d_21s_ease-in-out_infinite_alternate]",
-                          ][i]
-                        }`}
-                      >
-                        <Image
-                          src={a.src}
-                          alt={a.alt}
-                          fill
-                          sizes="25vw"
-                          className="object-cover [filter:saturate(0.8)_contrast(1.05)]"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </FadeIn>
             </div>
-            <HeroCollage className="hidden lg:block" />
           </div>
         </section>
 
