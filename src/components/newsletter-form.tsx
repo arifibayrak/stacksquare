@@ -33,7 +33,7 @@ export function NewsletterForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex max-w-md items-end gap-2">
+    <form onSubmit={onSubmit} className="flex w-full items-end gap-2">
       <label htmlFor="newsletter-email" className="sr-only">
         Email
       </label>
