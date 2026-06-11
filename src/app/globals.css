@@ -28,6 +28,13 @@ html {
   font-feature-settings: "ss01", "cv11";
 }
 
+/* Never allow horizontal panning into empty space beside the page. */
+html,
+body {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
 @media (max-width: 480px) {
   html {
     font-size: 17px;
