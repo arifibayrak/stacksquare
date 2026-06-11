@@ -1,6 +1,7 @@
 import Script from "next/script";
 import { SiteNav, SiteFooter } from "@/components/site-nav";
 import { EventCard } from "@/components/event-card";
+import { FadeIn, MaskedLine, Reveal } from "@/components/motion/reveal";
 import { getPublishedEvents } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
@@ -20,37 +21,50 @@ export default async function EventsPage() {
       <SiteNav />
       <main className="mx-auto max-w-4xl px-6">
         <section className="py-24 sm:py-32">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-            Events
-          </p>
-          <h1 className="mt-8 max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight text-[var(--color-ink)] text-balance sm:text-5xl lg:text-6xl">
-            The room you want to be in.
+          <FadeIn delay={0.05}>
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+              Events
+            </p>
+          </FadeIn>
+          <h1 className="mt-8 max-w-3xl font-display text-5xl font-medium leading-[1.06] text-[var(--color-ink)] sm:text-6xl">
+            <MaskedLine delay={0.12}>The room you want</MaskedLine>
+            <MaskedLine delay={0.24}>
+              to <span className="italic">be in</span>.
+            </MaskedLine>
           </h1>
-          <p className="mt-10 max-w-2xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
-            Each session puts one founder, investor, or operator to the four
-            lenses: technology stack, capital, strategy, and psychology. Here is
-            what is coming up and what already happened.
-          </p>
+          <FadeIn delay={0.45}>
+            <p className="mt-10 max-w-2xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
+              Each session puts one founder, investor, or operator to the four
+              lenses: technology stack, capital, strategy, and psychology. Here
+              is what is coming up and what already happened.
+            </p>
+          </FadeIn>
         </section>
 
         {!hasAny && (
           <section className="pb-24">
-            <div className="rounded-xl border border-dashed border-[var(--color-rule)] bg-[var(--color-paper-soft)] p-10 text-center">
-              <p className="text-lg text-[var(--color-ink-soft)]">
-                No sessions are published yet. The first ones land here soon.
-              </p>
-            </div>
+            <Reveal>
+              <div className="rounded-xl border border-dashed border-[var(--color-rule)] bg-[var(--color-paper-soft)] p-10 text-center">
+                <p className="text-lg text-[var(--color-ink-soft)]">
+                  No sessions are published yet. The first ones land here soon.
+                </p>
+              </div>
+            </Reveal>
           </section>
         )}
 
         {upcoming.length > 0 && (
           <section className="pb-20">
-            <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-              Upcoming
-            </h2>
+            <Reveal>
+              <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+                Upcoming
+              </h2>
+            </Reveal>
             <div className="mt-10 space-y-12">
-              {upcoming.map((e) => (
-                <EventCard key={e.id} event={e} variant="upcoming" />
+              {upcoming.map((e, i) => (
+                <Reveal key={e.id} delay={i * 0.06}>
+                  <EventCard event={e} variant="upcoming" index={i} />
+                </Reveal>
               ))}
             </div>
           </section>
@@ -58,12 +72,16 @@ export default async function EventsPage() {
 
         {past.length > 0 && (
           <section className="border-t border-[var(--color-rule)] py-20">
-            <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-              Past sessions
-            </h2>
+            <Reveal>
+              <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+                Past sessions
+              </h2>
+            </Reveal>
             <div className="mt-10 space-y-12">
-              {past.map((e) => (
-                <EventCard key={e.id} event={e} variant="past" />
+              {past.map((e, i) => (
+                <Reveal key={e.id} delay={i * 0.06}>
+                  <EventCard event={e} variant="past" index={i} />
+                </Reveal>
               ))}
             </div>
           </section>

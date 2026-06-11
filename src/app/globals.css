@@ -20,6 +20,7 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
 }
 
 html {
@@ -77,4 +78,69 @@ h1, h2, h3 {
 ::selection {
   background: var(--color-ink);
   color: var(--color-paper);
+}
+
+/* Display type (Fraunces) wants optical sizing and a touch less tracking. */
+.font-display {
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
+}
+
+/* Link underline that draws in from the left on hover. */
+.draw-link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 calc(100% - 0.1em);
+  background-repeat: no-repeat;
+  transition: background-size 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.draw-link:hover,
+.draw-link:focus-visible {
+  background-size: 100% 1px;
+}
+
+/* Horizontal ticker band. Content is rendered twice; track shifts one copy. */
+.marquee {
+  overflow: hidden;
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 44s linear infinite;
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Gentle idle drift for the hero mark. */
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Slow breathing pulse for small square accents. */
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+  [class*="animate-"] {
+    animation: none !important;
+  }
 }

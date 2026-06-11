@@ -4,62 +4,70 @@ import { formatDate } from "@/lib/utils";
 export function EventCard({
   event,
   variant,
+  index,
 }: {
   event: EventItem;
   variant: "upcoming" | "past";
+  index?: number;
 }) {
   return (
-    <article className="flex flex-col border-t border-[var(--color-rule)] pt-6">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-[var(--color-ink-muted)]">
-        {event.startAt ? (
-          <span className="tabular-nums">{formatDate(event.startAt)}</span>
-        ) : (
-          <span>Date to be announced</span>
+    <article className="group grid gap-4 border-t border-[var(--color-rule)] pt-6 transition-colors duration-300 hover:border-[var(--color-ink)] sm:grid-cols-[9rem_1fr] sm:gap-8">
+      <div className="font-mono text-xs text-[var(--color-ink-muted)]">
+        {typeof index === "number" && (
+          <p className="tabular-nums text-[var(--color-rule)] transition-colors duration-300 group-hover:text-[var(--color-brand-500)]">
+            0{index + 1}
+          </p>
         )}
-        {event.location ? (
-          <>
-            <span aria-hidden>·</span>
-            <span>{event.location}</span>
-          </>
-        ) : null}
+        <p className={typeof index === "number" ? "mt-3" : ""}>
+          {event.startAt ? (
+            <span className="tabular-nums">{formatDate(event.startAt)}</span>
+          ) : (
+            <span>Date to be announced</span>
+          )}
+        </p>
+        {event.location ? <p className="mt-1">{event.location}</p> : null}
         {event.featured ? (
-          <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-700">
-            Featured
-          </span>
+          <p className="mt-3">
+            <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-700">
+              Featured
+            </span>
+          </p>
         ) : null}
       </div>
 
-      <h3 className="mt-4 text-2xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-3xl">
-        {event.title}
-      </h3>
+      <div>
+        <h3 className="font-display text-2xl font-medium leading-snug text-[var(--color-ink)] sm:text-3xl">
+          {event.title}
+        </h3>
 
-      {event.summary ? (
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--color-ink-soft)]">
-          {event.summary}
-        </p>
-      ) : null}
+        {event.summary ? (
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--color-ink-soft)]">
+            {event.summary}
+          </p>
+        ) : null}
 
-      {variant === "upcoming" && event.lumaEventId ? (
-        // Luma checkout button: opens the in-page register popup once
-        // checkout-button.js has loaded; falls back to the event page on click.
-        <a
-          href={event.lumaUrl ?? `https://luma.com/event/${event.lumaEventId}`}
-          className="luma-checkout--button mt-5 inline-flex w-fit items-center rounded-md bg-[var(--color-ink)] px-5 py-2.5 text-base font-medium text-[var(--color-paper)] transition-opacity hover:opacity-85"
-          data-luma-action="checkout"
-          data-luma-event-id={event.lumaEventId}
-        >
-          Register for Event
-        </a>
-      ) : event.lumaUrl ? (
-        <a
-          href={event.lumaUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-4 inline-flex w-fit items-center text-base text-[var(--color-brand-600)] underline decoration-[var(--color-rule)] underline-offset-4 transition-colors hover:decoration-[var(--color-brand-600)]"
-        >
-          {variant === "upcoming" ? "Register on Luma ↗" : "View on Luma ↗"}
-        </a>
-      ) : null}
+        {variant === "upcoming" && event.lumaEventId ? (
+          // Luma checkout button: opens the in-page register popup once
+          // checkout-button.js has loaded; falls back to the event page on click.
+          <a
+            href={event.lumaUrl ?? `https://luma.com/event/${event.lumaEventId}`}
+            className="luma-checkout--button mt-6 inline-flex w-fit items-center gap-2 rounded-md bg-[var(--color-ink)] px-5 py-2.5 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(26,26,26,0.5)]"
+            data-luma-action="checkout"
+            data-luma-event-id={event.lumaEventId}
+          >
+            Register for Event
+          </a>
+        ) : event.lumaUrl ? (
+          <a
+            href={event.lumaUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="draw-link mt-5 inline-flex w-fit items-center text-base text-[var(--color-brand-600)]"
+          >
+            {variant === "upcoming" ? "Register on Luma ↗" : "View on Luma ↗"}
+          </a>
+        ) : null}
+      </div>
     </article>
   );
 }

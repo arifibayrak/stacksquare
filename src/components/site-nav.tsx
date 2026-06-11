@@ -1,48 +1,8 @@
-import Link from "next/link";
-import { LogoMark } from "@/components/logo-mark";
-
-const links = [
-  { href: "/events", label: "Events" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
-];
-
-export function SiteNav() {
-  return (
-    <header>
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-7 sm:py-9">
-        <Link
-          href="/"
-          className="group flex items-center gap-3 text-[var(--color-ink)]"
-          aria-label="StackSquare home"
-        >
-          <LogoMark
-            size={32}
-            className="transition-transform group-hover:rotate-[8deg]"
-          />
-          <span className="font-mono text-lg font-semibold tracking-tight sm:text-xl">
-            stack<span className="text-[var(--color-brand-500)]">square</span>
-          </span>
-        </Link>
-        <nav className="flex items-center gap-7 text-base">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="text-[var(--color-ink-soft)] transition-colors hover:text-[var(--color-ink)]"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
-      </div>
-    </header>
-  );
-}
+export { SiteHeader as SiteNav } from "@/components/site-header";
 
 export function SiteFooter() {
   return (
-    <footer className="mt-32 border-t border-[var(--color-rule)]">
+    <footer className="relative mt-32 overflow-hidden border-t border-[var(--color-rule)]">
       <div className="mx-auto max-w-6xl space-y-10 px-6 py-14 text-base text-[var(--color-ink-muted)]">
         <div className="grid gap-10 sm:grid-cols-2">
           <div>
@@ -52,7 +12,7 @@ export function SiteFooter() {
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
               <a
                 href="mailto:arif@stacksquare.ai"
-                className="text-[var(--color-ink)] hover:opacity-70"
+                className="draw-link text-[var(--color-ink)]"
               >
                 arif@stacksquare.ai
               </a>
@@ -60,7 +20,7 @@ export function SiteFooter() {
                 href="https://www.linkedin.com/in/arifismailbayrak"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-[var(--color-ink)]"
+                className="draw-link hover:text-[var(--color-ink)]"
               >
                 LinkedIn ↗
               </a>
@@ -73,7 +33,7 @@ export function SiteFooter() {
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
               <a
                 href="mailto:kerem@stacksquare.ai"
-                className="text-[var(--color-ink)] hover:opacity-70"
+                className="draw-link text-[var(--color-ink)]"
               >
                 kerem@stacksquare.ai
               </a>
@@ -81,14 +41,20 @@ export function SiteFooter() {
                 href="https://www.linkedin.com/in/keremozkefeli"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-[var(--color-ink)]"
+                className="draw-link hover:text-[var(--color-ink)]"
               >
                 LinkedIn ↗
               </a>
             </div>
           </div>
         </div>
+      </div>
 
+      {/* Oversized wordmark, clipped at the bottom edge of the page. */}
+      <div aria-hidden className="pointer-events-none select-none">
+        <p className="translate-y-[22%] whitespace-nowrap px-4 text-center font-display text-[clamp(4.5rem,15.5vw,13rem)] lowercase italic leading-none tracking-tight text-[var(--color-ink)] opacity-[0.05]">
+          stacksquare
+        </p>
       </div>
     </footer>
   );
