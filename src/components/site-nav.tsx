@@ -4,6 +4,15 @@ export function SiteFooter() {
   return (
     <footer className="relative mt-32 overflow-hidden border-t border-[var(--color-rule)]">
       <div className="mx-auto max-w-6xl space-y-10 px-6 py-14 text-base text-[var(--color-ink-muted)]">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink)]">
+            stacksquare
+          </p>
+          <p className="mt-3 max-w-md leading-relaxed">
+            An events organization. Fireside chats, expert sessions, and peer
+            gatherings in London for founders, investors, and operators.
+          </p>
+        </div>
         <div className="grid gap-10 sm:grid-cols-2">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.18em]">

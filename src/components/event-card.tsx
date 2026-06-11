@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { type EventItem } from "@/db/schema";
 import { formatDate } from "@/lib/utils";
 
@@ -36,6 +37,17 @@ export function EventCard({
       </div>
 
       <div>
+        {event.coverImage ? (
+          <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-xl border border-[var(--color-rule)] bg-[var(--color-paper-soft)]">
+            <Image
+              src={event.coverImage}
+              alt={event.title}
+              fill
+              sizes="(min-width: 1024px) 760px, 92vw"
+              className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+            />
+          </div>
+        ) : null}
         <h3 className="font-display text-2xl font-medium leading-snug text-[var(--color-ink)] sm:text-3xl">
           {event.title}
         </h3>

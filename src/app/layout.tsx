@@ -22,7 +22,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "stacksquare · Strategy meets Capital",
+  title: "stacksquare · Events for founders, investors, and operators",
   description:
     "stacksquare convenes founders, investors, and operators. Fireside rooms, expert sessions, and peer gatherings where strategy, capital, stack, and psychology meet. Register on Luma.",
   metadataBase: new URL(
