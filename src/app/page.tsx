@@ -1,5 +1,3 @@
-import { existsSync } from "node:fs";
-import path from "node:path";
 import Link from "next/link";
 import Script from "next/script";
 import { PublicShell } from "@/components/public-shell";
@@ -98,30 +96,12 @@ function TickerRow() {
 export default async function HomePage() {
   const { upcoming, past } = await getPublishedEvents();
   const recentPast = past.slice(0, 3);
-  // Drop a file at public/hero-bg.mp4 and it plays behind the hero.
-  const hasHeroVideo = existsSync(
-    path.join(process.cwd(), "public", "hero-bg.mp4"),
-  );
 
   return (
     <PublicShell>
       <main>
-        <section className="relative overflow-hidden">
-          {hasHeroVideo && (
-            <div aria-hidden className="absolute inset-0 motion-reduce:hidden">
-              <video
-                src="/hero-bg.mp4"
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="h-full w-full object-cover opacity-40"
-              />
-              {/* Keep the headline readable over the footage. */}
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(14,13,11,0.35)_0%,rgba(14,13,11,0.85)_100%)]" />
-            </div>
-          )}
-          <div className="relative mx-auto max-w-4xl px-6 py-16 text-center sm:py-24">
+        <section>
+          <div className="mx-auto max-w-4xl px-6 py-16 text-center sm:py-24">
             <h1 className="font-display text-[clamp(2.3rem,5vw,4rem)] font-medium leading-[1.06] text-[var(--color-ink)]">
               <MaskedLine delay={0.12}>Strategy meets capital.</MaskedLine>
               <MaskedLine delay={0.24}>Stack meets psychology.</MaskedLine>
