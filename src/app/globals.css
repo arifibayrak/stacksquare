@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-brand-50: oklch(0.98 0.01 280);
-  --color-brand-500: oklch(0.55 0.18 280);
-  --color-brand-600: oklch(0.48 0.18 280);
-  --color-brand-700: oklch(0.40 0.18 280);
+  --color-brand-50: oklch(0.96 0.02 264);
+  --color-brand-500: oklch(0.45 0.19 264);
+  --color-brand-600: oklch(0.38 0.18 264);
+  --color-brand-700: oklch(0.31 0.16 264);
 
   --color-paper: #fbfaf8;
   --color-paper-soft: #f3f1ec;
@@ -15,7 +15,7 @@
 
   --color-phase-sourcing: #b8b3a9;
   --color-phase-outreach: #d99a4d;
-  --color-phase-production: oklch(0.55 0.18 280);
+  --color-phase-production: oklch(0.45 0.19 264);
   --color-phase-maintained: #8a9a9a;
 
   --font-sans: var(--font-geist-sans);
@@ -59,14 +59,14 @@ body {
     --color-rule: #2a2a2a;
     --color-grid: rgba(255, 255, 255, 0.04);
 
-    --color-brand-50: oklch(0.22 0.05 280);
-    --color-brand-500: oklch(0.68 0.18 280);
-    --color-brand-600: oklch(0.62 0.18 280);
-    --color-brand-700: oklch(0.55 0.18 280);
+    --color-brand-50: oklch(0.24 0.06 264);
+    --color-brand-500: oklch(0.6 0.19 264);
+    --color-brand-600: oklch(0.55 0.19 264);
+    --color-brand-700: oklch(0.48 0.17 264);
 
     --color-phase-sourcing: #8a857c;
     --color-phase-outreach: #e0a45a;
-    --color-phase-production: oklch(0.68 0.18 280);
+    --color-phase-production: oklch(0.6 0.19 264);
     --color-phase-maintained: #9aaaaa;
   }
 }
@@ -93,10 +93,10 @@ h1, h2, h3 {
   --color-rule: #2b2823;
   --color-grid: rgba(240, 235, 223, 0.045);
 
-  --color-brand-50: #221d33;
-  --color-brand-500: oklch(0.68 0.18 280);
-  --color-brand-600: oklch(0.74 0.16 280);
-  --color-brand-700: oklch(0.82 0.11 280);
+  --color-brand-50: oklch(0.24 0.07 264);
+  --color-brand-500: oklch(0.52 0.21 264);
+  --color-brand-600: oklch(0.64 0.18 264);
+  --color-brand-700: oklch(0.78 0.1 264);
 
   background-color: var(--color-paper);
   color: var(--color-ink);
