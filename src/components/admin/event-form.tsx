@@ -93,6 +93,13 @@ export function EventForm({
           defaultValue={event?.coverImage ?? ""}
           placeholder="https://..."
         />
+        <Textarea
+          label="Photo gallery (one image URL per line, optional)"
+          name="gallery"
+          defaultValue={event?.gallery?.join("\n") ?? ""}
+          rows={4}
+          placeholder={"/events/my-event/1.jpg\n/events/my-event/2.jpg"}
+        />
         <div>
           <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">
             Status

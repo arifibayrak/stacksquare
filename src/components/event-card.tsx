@@ -37,7 +37,34 @@ export function EventCard({
       </div>
 
       <div>
-        {event.coverImage ? (
+        {event.gallery && event.gallery.length > 0 ? (
+          // All event photos, scattered like prints on a desk. Scrolls
+          // sideways on small screens; each shot straightens on hover.
+          <div className="-mx-1 mb-7 flex gap-4 overflow-x-auto px-1 pb-3 pt-3 sm:gap-5 [scrollbar-width:thin]">
+            {event.gallery.map((src, i) => (
+              <div
+                key={src}
+                className={`relative shrink-0 overflow-hidden rounded-lg border border-[var(--color-rule)] bg-[var(--color-paper-soft)] shadow-[0_24px_48px_-20px_rgba(0,0,0,0.8)] transition-all duration-500 hover:z-10 hover:rotate-0 hover:scale-[1.05] ${
+                  i === 0
+                    ? "aspect-[4/3] w-64 sm:w-72"
+                    : "aspect-[3/4] w-40 sm:w-44"
+                } ${
+                  ["rotate-[-2deg]", "rotate-[1.6deg] translate-y-1.5", "rotate-[-1.2deg]", "rotate-[2.2deg] translate-y-1", "rotate-[-1.8deg] translate-y-2"][
+                    i % 5
+                  ]
+                }`}
+              >
+                <Image
+                  src={src}
+                  alt={`${event.title} photo ${i + 1}`}
+                  fill
+                  sizes="(min-width: 640px) 288px, 256px"
+                  className="object-cover [filter:saturate(0.92)] transition-[filter] duration-500 hover:[filter:none]"
+                />
+              </div>
+            ))}
+          </div>
+        ) : event.coverImage ? (
           <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-xl border border-[var(--color-rule)] bg-[var(--color-paper-soft)]">
             <Image
               src={event.coverImage}

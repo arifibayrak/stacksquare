@@ -281,6 +281,8 @@ export const events = pgTable(
     startAt: timestamp("start_at", { withTimezone: true }),
     location: text("location"),
     coverImage: text("cover_image"),
+    // Additional public photos (recap shots etc.), rendered as a strip.
+    gallery: text("gallery").array(),
     status: eventStatusEnum("status").default("draft").notNull(),
     featured: boolean("featured").default(false).notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),

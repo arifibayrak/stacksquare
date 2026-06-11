@@ -24,6 +24,7 @@ const EventInput = z.object({
   startAt: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   coverImage: z.string().optional().nullable(),
+  gallery: z.string().optional().nullable(),
   status: z.enum(EVENT_STATUSES).default("draft"),
   featured: z.coerce.boolean().default(false),
   sortOrder: z.coerce.number().int().default(0),
@@ -57,6 +58,16 @@ function parseStartAt(v: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// Textarea sends one image URL per line; store as a clean array (or null).
+function parseGallery(v: string | null | undefined): string[] | null {
+  if (!v) return null;
+  const urls = v
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return urls.length > 0 ? urls : null;
+}
+
 function revalidatePublic() {
   revalidatePath("/");
   revalidatePath("/events");
@@ -81,6 +92,7 @@ export async function createEvent(formData: FormData) {
       startAt: parseStartAt(parsed.startAt),
       location: parsed.location ?? null,
       coverImage: parsed.coverImage ?? null,
+      gallery: parseGallery(parsed.gallery),
       status: parsed.status,
       featured: parsed.featured,
       sortOrder: parsed.sortOrder,
@@ -121,6 +133,7 @@ export async function updateEvent(id: string, formData: FormData) {
       startAt: parseStartAt(parsed.startAt),
       location: parsed.location ?? null,
       coverImage: parsed.coverImage ?? null,
+      gallery: parseGallery(parsed.gallery),
       status: parsed.status,
       featured: parsed.featured,
       sortOrder: parsed.sortOrder,
