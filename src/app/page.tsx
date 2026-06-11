@@ -38,6 +38,21 @@ const tickerItems = [
   "Capital structure",
   "Strategic planning",
   "Psychology",
+  "Founders",
+  "Investors",
+  "Operators",
+  "Venture capital",
+  "Term sheets",
+  "Unit economics",
+  "Go-to-market",
+  "Product-market fit",
+  "Due diligence",
+  "Competitive moats",
+  "Decision making",
+  "Fundraising",
+  "Market entry",
+  "Pricing power",
+  "Small rooms",
 ];
 
 function TickerRow() {
@@ -130,7 +145,7 @@ export default async function HomePage() {
         </section>
 
         <div className="marquee border-y border-[var(--color-rule)] py-4">
-          <div className="marquee-track">
+          <div className="marquee-track" style={{ animationDuration: "120s" }}>
             <TickerRow />
             <TickerRow />
           </div>

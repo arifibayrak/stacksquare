@@ -33,7 +33,7 @@ export function NewsletterForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex max-w-md gap-2">
+    <form onSubmit={onSubmit} className="flex max-w-md items-end gap-2">
       <label htmlFor="newsletter-email" className="sr-only">
         Email
       </label>
@@ -43,12 +43,12 @@ export function NewsletterForm() {
         type="email"
         required
         placeholder="you@example.com"
-        className="min-w-0 flex-1 rounded-md border border-[var(--color-rule)] bg-[var(--color-paper)] px-4 py-2.5 text-base text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-ink)] focus:outline-none"
+        className="h-12 min-w-0 flex-1 rounded-md border border-[var(--color-rule)] bg-[var(--color-paper)] px-4 text-base text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-ink)] focus:outline-none"
       />
       <button
         type="submit"
         disabled={status === "sending"}
-        className="shrink-0 rounded-md bg-[var(--color-ink)] px-5 py-2.5 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(26,26,26,0.5)] disabled:opacity-50"
+        className="h-12 shrink-0 rounded-md bg-[var(--color-ink)] px-6 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(26,26,26,0.5)] disabled:opacity-50"
       >
         {status === "sending" ? "Joining…" : "Join"}
       </button>

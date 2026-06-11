@@ -83,7 +83,7 @@ export default function ContactPage() {
           </div>
         </FadeIn>
 
-        <div className="mt-20 space-y-20">
+        <div className="mt-12 space-y-12">
           <Reveal>
             <section className="grid gap-10 border-t border-[var(--color-rule)] pt-12 lg:grid-cols-[2fr_3fr] lg:gap-16">
               <SectionHeading
@@ -96,7 +96,7 @@ export default function ContactPage() {
                 }
                 blurb="Be in the room next time. Follow the stacksquare calendar on Luma to catch every session, or leave your email and we will write when a new room opens."
               />
-              <div className="space-y-6 lg:pt-12">
+              <div className="space-y-6">
                 {calendarUrl && (
                   <a
                     href={calendarUrl}
@@ -137,7 +137,7 @@ export default function ContactPage() {
                 }
                 blurb="Founder, builder, operator, investor, professor. If you can hold a room across the four lenses, tell us what you would bring."
               />
-              <div className="lg:pt-12">
+              <div>
                 <SubmissionForm
                   kind="speaker"
                   submitLabel="Pitch your session"
@@ -187,7 +187,7 @@ export default function ContactPage() {
                 }
                 blurb="Venues, event organizations, and companies. If you have a space, an audience, or a brand that belongs in the square, let's plan something together."
               />
-              <div className="lg:pt-12">
+              <div>
                 <SubmissionForm
                   kind="partner"
                   submitLabel="Start the conversation"
@@ -216,7 +216,7 @@ export default function ContactPage() {
         </div>
 
         <Reveal>
-          <p className="mt-20 border-t border-[var(--color-rule)] pt-10 text-base text-[var(--color-ink-muted)]">
+          <p className="mt-12 border-t border-[var(--color-rule)] pt-12 text-base text-[var(--color-ink-muted)]">
             Press or anything else:{" "}
             <a
               href="mailto:arif@stacksquare.ai"
