@@ -28,7 +28,7 @@ export function EventCard({
         {event.location ? <p className="mt-1">{event.location}</p> : null}
         {event.featured ? (
           <p className="mt-3">
-            <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-700">
+            <span className="rounded bg-[var(--color-brand-50)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--color-brand-700)]">
               Featured
             </span>
           </p>

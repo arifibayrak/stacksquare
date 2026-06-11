@@ -1,4 +1,4 @@
-import { SiteNav, SiteFooter } from "@/components/site-nav";
+import { PublicShell } from "@/components/public-shell";
 import { InitialsAvatar } from "@/components/initials-avatar";
 import { FadeIn, MaskedLine, Reveal } from "@/components/motion/reveal";
 
@@ -49,8 +49,7 @@ function FounderAvatar(props: {
 
 export default function AboutPage() {
   return (
-    <>
-      <SiteNav />
+    <PublicShell>
       <main className="mx-auto max-w-3xl px-6 py-24 sm:py-32">
         <FadeIn delay={0.05}>
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
@@ -157,7 +156,6 @@ export default function AboutPage() {
           </Reveal>
         </div>
       </main>
-      <SiteFooter />
-    </>
+    </PublicShell>
   );
 }

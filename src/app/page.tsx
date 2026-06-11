@@ -1,35 +1,47 @@
 import Link from "next/link";
+import Image from "next/image";
 import Script from "next/script";
-import { SiteNav, SiteFooter } from "@/components/site-nav";
+import { PublicShell } from "@/components/public-shell";
 import { EventCard } from "@/components/event-card";
-import { HeroMark } from "@/components/motion/hero-mark";
-import {
-  FadeIn,
-  MaskedLine,
-  Reveal,
-  Stagger,
-  StaggerItem,
-} from "@/components/motion/reveal";
+import { HeroCollage } from "@/components/motion/hero-collage";
+import { LensChapter } from "@/components/motion/lens-chapter";
+import { FadeIn, MaskedLine, Reveal } from "@/components/motion/reveal";
 import { getPublishedEvents } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
-const lenses = [
+const chapters = [
   {
-    name: "Technology stack",
-    blurb: "What the business is built on, and why that choice compounds.",
+    index: "01",
+    title: "Technology stack",
+    kicker: "What is it built on?",
+    body: "Architecture, tooling, and the build-or-buy calls. Why the stack choice compounds over time, and where it breaks.",
+    src: "/lenses/tech.webp",
+    alt: "Closeup of a blue circuit board",
   },
   {
-    name: "Capital structure",
-    blurb: "Who funds it, on what terms, and what the money expects back.",
+    index: "02",
+    title: "Capital structure",
+    kicker: "Who pays for it?",
+    body: "Funding, terms, and what the money expects back. The numbers behind the story, read out loud.",
+    src: "/lenses/capital.jpg",
+    alt: "Investing newspaper page with a twenty dollar bill",
   },
   {
-    name: "Strategic planning",
-    blurb: "The moves, the sequencing, and the bets behind both.",
+    index: "03",
+    title: "Strategic planning",
+    kicker: "What is the next move?",
+    body: "Position, sequencing, and the bets behind both. The frameworks operators actually reach for under pressure.",
+    src: "/lenses/strategy.jpg",
+    alt: "Dictionary entry for strategy",
   },
   {
-    name: "Psychology",
-    blurb: "How operators actually decide when the stakes are real.",
+    index: "04",
+    title: "Psychology",
+    kicker: "How do they decide?",
+    body: "Judgment, bias, and conviction when the stakes are real. The part of the operating manual nobody writes down.",
+    src: "/lenses/psychology.webp",
+    alt: "Vintage anatomical brain engraving over dictionary print",
   },
 ];
 
@@ -66,11 +78,10 @@ export default async function HomePage() {
   const highlights = upcoming.slice(0, 3);
 
   return (
-    <>
-      <SiteNav />
+    <PublicShell>
       <main>
         <section className="mx-auto max-w-6xl px-6">
-          <div className="grid items-center gap-16 py-24 sm:py-32 lg:grid-cols-[1fr_auto] lg:gap-24 lg:py-36">
+          <div className="grid items-center gap-14 py-20 sm:py-24 lg:min-h-[82svh] lg:grid-cols-[1.05fr_auto] lg:gap-16 lg:py-16">
             <div>
               <FadeIn delay={0.05}>
                 <p className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
@@ -82,7 +93,7 @@ export default async function HomePage() {
                   Business School
                 </p>
               </FadeIn>
-              <h1 className="mt-8 max-w-4xl font-display text-5xl font-medium leading-[1.06] text-[var(--color-ink)] sm:text-6xl lg:text-7xl">
+              <h1 className="mt-8 font-display text-[clamp(2.9rem,7.2vw,5.6rem)] font-medium leading-[1.02] text-[var(--color-ink)]">
                 <MaskedLine delay={0.12}>Strategy meets capital.</MaskedLine>
                 <MaskedLine delay={0.24}>Stack meets psychology.</MaskedLine>
                 <MaskedLine delay={0.36}>
@@ -96,18 +107,17 @@ export default async function HomePage() {
                 </MaskedLine>
               </h1>
               <FadeIn delay={0.55}>
-                <p className="mt-10 max-w-2xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
+                <p className="mt-9 max-w-xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
                   stacksquare convenes the people who build, fund, and advise
-                  serious businesses. Fireside rooms, expert sessions, and peer
-                  gatherings, each mapped to four lenses: technology stack,
-                  capital structure, strategic planning, and psychology.
+                  serious businesses. Small rooms, one expert in the middle,
+                  every session read through four lenses.
                 </p>
               </FadeIn>
               <FadeIn delay={0.68}>
                 <div className="mt-10 flex flex-wrap items-center gap-4">
                   <Link
                     href="/events"
-                    className="group inline-flex items-center gap-2 rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(26,26,26,0.5)]"
+                    className="group inline-flex items-center gap-2 rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
                   >
                     See the sessions
                     <span
@@ -118,15 +128,35 @@ export default async function HomePage() {
                     </span>
                   </Link>
                   <Link
-                    href="/about"
+                    href="/contact"
                     className="draw-link text-base text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"
                   >
-                    About stacksquare
+                    Get in the square
                   </Link>
                 </div>
               </FadeIn>
+
+              {/* Compact artifact strip on small screens; the collage takes over on lg. */}
+              <FadeIn delay={0.8} className="mt-14 lg:hidden">
+                <div className="grid grid-cols-4 gap-3">
+                  {chapters.map((c) => (
+                    <div
+                      key={c.src}
+                      className="relative aspect-[3/4] overflow-hidden rounded-lg border border-[var(--color-rule)]"
+                    >
+                      <Image
+                        src={c.src}
+                        alt={c.alt}
+                        fill
+                        sizes="25vw"
+                        className="object-cover [filter:saturate(0.8)_contrast(1.05)]"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </FadeIn>
             </div>
-            <HeroMark className="hidden lg:block" />
+            <HeroCollage className="hidden lg:block" />
           </div>
         </section>
 
@@ -137,43 +167,28 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+        <section className="mx-auto max-w-6xl px-6 pt-24 sm:pt-28">
           <Reveal>
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
               The four lenses
             </p>
-            <h2 className="mt-6 max-w-2xl font-display text-3xl font-medium leading-tight text-[var(--color-ink)] sm:text-4xl">
-              Every session, <span className="italic">four ways in</span>.
+            <h2 className="mt-6 max-w-3xl font-display text-4xl font-medium leading-[1.08] text-[var(--color-ink)] sm:text-5xl">
+              One guest. One room.{" "}
+              <span className="italic text-[var(--color-ink-muted)]">
+                Four ways to read them.
+              </span>
             </h2>
           </Reveal>
-          <Stagger className="mt-14 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-            {lenses.map((lens, i) => (
-              <StaggerItem key={lens.name} className="group">
-                <div className="border-t border-[var(--color-rule)] pt-6 transition-colors duration-300 group-hover:border-[var(--color-ink)]">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs tabular-nums text-[var(--color-ink-muted)]">
-                      0{i + 1}
-                    </span>
-                    <span
-                      aria-hidden
-                      className="size-2.5 rounded-[3px] bg-[var(--color-rule)] transition-all duration-300 group-hover:rotate-45 group-hover:bg-[var(--color-brand-500)]"
-                    />
-                  </div>
-                  <h3 className="mt-5 font-display text-2xl font-medium text-[var(--color-ink)]">
-                    {lens.name}
-                  </h3>
-                  <p className="mt-3 text-base leading-relaxed text-[var(--color-ink-soft)]">
-                    {lens.blurb}
-                  </p>
-                </div>
-              </StaggerItem>
-            ))}
-          </Stagger>
+          <div className="h-20" />
         </section>
+
+        {chapters.map((c, i) => (
+          <LensChapter key={c.index} {...c} flip={i % 2 === 1} />
+        ))}
 
         {highlights.length > 0 && (
           <section className="border-t border-[var(--color-rule)]">
-            <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+            <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
               <Reveal>
                 <div className="flex flex-wrap items-end justify-between gap-6">
                   <div>
@@ -203,12 +218,12 @@ export default async function HomePage() {
           </section>
         )}
 
-        <section className="mx-auto max-w-6xl px-6 pb-8">
+        <section className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
           <Reveal>
             <div className="relative overflow-hidden rounded-2xl border border-[var(--color-rule)] bg-[var(--color-paper-soft)] px-8 py-16 text-center sm:px-16 sm:py-20">
               <div
                 aria-hidden
-                className="absolute -right-10 -top-10 grid rotate-12 grid-cols-2 gap-3 opacity-[0.06]"
+                className="absolute -right-10 -top-10 grid rotate-12 grid-cols-2 gap-3 opacity-[0.08]"
               >
                 <div className="size-24 rounded-xl bg-[var(--color-ink)]" />
                 <div className="size-24 rounded-xl bg-[var(--color-ink)]" />
@@ -225,7 +240,7 @@ export default async function HomePage() {
               <div className="relative mt-10 flex flex-wrap items-center justify-center gap-4">
                 <Link
                   href="/events"
-                  className="rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(26,26,26,0.5)]"
+                  className="rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
                 >
                   See the sessions
                 </Link>
@@ -240,13 +255,12 @@ export default async function HomePage() {
           </Reveal>
         </section>
       </main>
-      <SiteFooter />
       {/* Powers the Luma "Register for Event" checkout buttons on event cards. */}
       <Script
         id="luma-checkout"
         src="https://embed.lu.ma/checkout-button.js"
         strategy="afterInteractive"
       />
-    </>
+    </PublicShell>
   );
 }

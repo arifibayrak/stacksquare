@@ -1,5 +1,5 @@
 import Script from "next/script";
-import { SiteNav, SiteFooter } from "@/components/site-nav";
+import { PublicShell } from "@/components/public-shell";
 import { EventCard } from "@/components/event-card";
 import { FadeIn, MaskedLine, Reveal } from "@/components/motion/reveal";
 import { getPublishedEvents } from "@/lib/events";
@@ -17,8 +17,7 @@ export default async function EventsPage() {
   const hasAny = upcoming.length > 0 || past.length > 0;
 
   return (
-    <>
-      <SiteNav />
+    <PublicShell>
       <main className="mx-auto max-w-4xl px-6">
         <section className="py-24 sm:py-32">
           <FadeIn delay={0.05}>
@@ -87,13 +86,12 @@ export default async function EventsPage() {
           </section>
         )}
       </main>
-      <SiteFooter />
       {/* Powers the Luma "Register for Event" checkout buttons on event cards. */}
       <Script
         id="luma-checkout"
         src="https://embed.lu.ma/checkout-button.js"
         strategy="afterInteractive"
       />
-    </>
+    </PublicShell>
   );
 }

@@ -1,4 +1,4 @@
-import { SiteNav, SiteFooter } from "@/components/site-nav";
+import { PublicShell } from "@/components/public-shell";
 import { SubmissionForm } from "@/components/submission-form";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { FadeIn, MaskedLine, Reveal } from "@/components/motion/reveal";
@@ -54,8 +54,7 @@ export default function ContactPage() {
   const calendarUrl = lumaCalendarUrl();
 
   return (
-    <>
-      <SiteNav />
+    <PublicShell>
       <main className="mx-auto max-w-5xl px-6 py-20 sm:py-28">
         <FadeIn delay={0.05}>
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
@@ -235,7 +234,6 @@ export default function ContactPage() {
           </p>
         </Reveal>
       </main>
-      <SiteFooter />
-    </>
+    </PublicShell>
   );
 }
