@@ -1,9 +1,12 @@
 import { SignUp } from "@clerk/nextjs";
+import { PublicShell } from "@/components/public-shell";
 
 export default function Page() {
   return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <SignUp />
-    </div>
+    <PublicShell>
+      <div className="flex min-h-[70vh] items-center justify-center px-6 py-16">
+        <SignUp />
+      </div>
+    </PublicShell>
   );
 }

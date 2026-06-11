@@ -28,9 +28,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             muted
             loop
             playsInline
-            className="h-full w-full object-cover opacity-25"
+            className="h-full w-full object-cover opacity-35"
           />
-          <div className="absolute inset-0 bg-[rgba(14,13,11,0.55)]" />
+          <div className="absolute inset-0 bg-[rgba(14,13,11,0.45)]" />
         </div>
       )}
       <div className="relative z-10 flex min-h-screen flex-col">

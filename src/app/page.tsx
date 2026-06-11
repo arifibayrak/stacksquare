@@ -184,7 +184,7 @@ export default async function HomePage() {
               </div>
             ) : (
               <Reveal className="mt-12">
-                <div className="rounded-xl border border-dashed border-[var(--color-rule)] bg-[var(--color-paper-soft)] p-8">
+                <div className="rounded-xl border border-dashed border-[var(--color-rule)] bg-[rgba(24,21,17,0.55)] p-8 backdrop-blur-sm">
                   <p className="text-lg text-[var(--color-ink-soft)]">
                     The next session is being planned.{" "}
                     <Link
@@ -253,7 +253,7 @@ export default async function HomePage() {
 
         <section className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
           <Reveal>
-            <div className="relative overflow-hidden rounded-2xl border border-[var(--color-rule)] bg-[var(--color-paper-soft)] px-8 py-16 text-center sm:px-16 sm:py-20">
+            <div className="relative overflow-hidden rounded-2xl border border-[var(--color-rule)] bg-[rgba(24,21,17,0.55)] px-8 py-16 text-center backdrop-blur-sm sm:px-16 sm:py-20">
               <div
                 aria-hidden
                 className="absolute -right-10 -top-10 grid rotate-12 grid-cols-2 gap-3 opacity-[0.08]"

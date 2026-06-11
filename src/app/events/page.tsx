@@ -43,7 +43,7 @@ export default async function EventsPage() {
         {!hasAny && (
           <section className="pb-24">
             <Reveal>
-              <div className="rounded-xl border border-dashed border-[var(--color-rule)] bg-[var(--color-paper-soft)] p-10 text-center">
+              <div className="rounded-xl border border-dashed border-[var(--color-rule)] bg-[rgba(24,21,17,0.55)] p-10 text-center backdrop-blur-sm">
                 <p className="text-lg text-[var(--color-ink-soft)]">
                   No sessions are published yet. The first ones land here soon.
                 </p>
