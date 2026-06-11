@@ -1,4 +1,4 @@
-import { db, submissions } from "@/db";
+import { db, submissions, subscribers } from "@/db";
 import { desc, isNull } from "drizzle-orm";
 import { formatDate } from "@/lib/utils";
 import { TriageActions } from "./client";
@@ -6,11 +6,14 @@ import { TriageActions } from "./client";
 export const dynamic = "force-dynamic";
 
 export default async function SubmissionsPage() {
-  const pending = await db
-    .select()
-    .from(submissions)
-    .where(isNull(submissions.triagedAt))
-    .orderBy(desc(submissions.createdAt));
+  const [pending, subs] = await Promise.all([
+    db
+      .select()
+      .from(submissions)
+      .where(isNull(submissions.triagedAt))
+      .orderBy(desc(submissions.createdAt)),
+    db.select().from(subscribers).orderBy(desc(subscribers.createdAt)),
+  ]);
 
   return (
     <div className="px-8 py-10">
@@ -59,6 +62,35 @@ export default async function SubmissionsPage() {
               </li>
             );
           })}
+        </ul>
+      )}
+
+      <h2 className="mt-14 text-lg font-semibold tracking-tight">
+        Newsletter subscribers
+      </h2>
+      <p className="mt-1 text-sm text-zinc-500">
+        Emails collected from the &ldquo;join the list&rdquo; form on the
+        public contact page.
+      </p>
+      {subs.length === 0 ? (
+        <p className="mt-6 rounded-md border border-zinc-200 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900">
+          No subscribers yet.
+        </p>
+      ) : (
+        <ul className="mt-6 divide-y divide-zinc-200 rounded-md border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
+          {subs.map((s) => (
+            <li
+              key={s.id}
+              className="flex items-center justify-between px-5 py-3 text-sm"
+            >
+              <span className="text-zinc-700 dark:text-zinc-300">
+                {s.email}
+              </span>
+              <span className="text-xs text-zinc-500">
+                {formatDate(s.createdAt)}
+              </span>
+            </li>
+          ))}
         </ul>
       )}
     </div>

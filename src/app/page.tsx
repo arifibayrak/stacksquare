@@ -81,16 +81,7 @@ export default async function HomePage() {
         <section className="mx-auto max-w-6xl px-6">
           <div className="grid items-center gap-14 py-20 sm:py-24 lg:grid-cols-[1.05fr_auto] lg:gap-16 lg:py-24">
             <div>
-              <FadeIn delay={0.05}>
-                <p className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-                  <span
-                    aria-hidden
-                    className="inline-block size-2 rounded-[2px] bg-[var(--color-brand-500)] animate-[pulse-soft_4s_ease-in-out_infinite]"
-                  />
-                  Events in London · Imperial Business School
-                </p>
-              </FadeIn>
-              <h1 className="mt-8 font-display text-[clamp(2.3rem,5vw,4rem)] font-medium leading-[1.06] text-[var(--color-ink)]">
+              <h1 className="font-display text-[clamp(2.3rem,5vw,4rem)] font-medium leading-[1.06] text-[var(--color-ink)]">
                 <MaskedLine delay={0.12}>Strategy meets capital.</MaskedLine>
                 <MaskedLine delay={0.24}>Stack meets psychology.</MaskedLine>
                 <MaskedLine delay={0.36}>
@@ -138,18 +129,29 @@ export default async function HomePage() {
               {/* Compact artifact strip on small screens; the collage takes over on lg. */}
               <FadeIn delay={0.8} className="mt-14 lg:hidden">
                 <div className="grid grid-cols-4 gap-3">
-                  {lensArtifacts.map((a) => (
+                  {lensArtifacts.map((a, i) => (
                     <div
                       key={a.src}
-                      className="relative aspect-[3/4] overflow-hidden rounded-lg border border-[var(--color-rule)]"
+                      className="relative aspect-[3/4] overflow-hidden rounded-[4px] border border-[var(--color-rule)]"
                     >
-                      <Image
-                        src={a.src}
-                        alt={a.alt}
-                        fill
-                        sizes="25vw"
-                        className="object-cover [filter:saturate(0.8)_contrast(1.05)]"
-                      />
+                      <div
+                        className={`absolute inset-0 ${
+                          [
+                            "animate-[kenburns-a_16s_ease-in-out_infinite_alternate]",
+                            "animate-[kenburns-b_19s_ease-in-out_infinite_alternate]",
+                            "animate-[kenburns-c_17s_ease-in-out_infinite_alternate]",
+                            "animate-[kenburns-d_21s_ease-in-out_infinite_alternate]",
+                          ][i]
+                        }`}
+                      >
+                        <Image
+                          src={a.src}
+                          alt={a.alt}
+                          fill
+                          sizes="25vw"
+                          className="object-cover [filter:saturate(0.8)_contrast(1.05)]"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -4,175 +4,87 @@ import Image from "next/image";
 import { useRef } from "react";
 import {
   motion,
-  useMotionValue,
   useReducedMotion,
   useScroll,
-  useSpring,
   useTransform,
-  type MotionValue,
 } from "motion/react";
 import { EASE_OUT } from "@/components/motion/reveal";
 
-type Card = {
-  src: string;
-  alt: string;
-  label: string;
-  left: string;
-  top: string;
-  w: number;
-  h: number;
-  rotate: number;
-  depth: number;
-  delay: number;
-  z: number;
-};
-
-const cards: Card[] = [
+const cards = [
   {
     src: "/lenses/tech.webp",
     alt: "Closeup of a blue circuit board",
     label: "Stack",
-    left: "0%",
-    top: "6%",
-    w: 220,
-    h: 300,
-    rotate: -7,
-    depth: 26,
-    delay: 0.25,
-    z: 1,
+    motion: "animate-[kenburns-a_16s_ease-in-out_infinite_alternate]",
+    delay: 0.2,
   },
   {
     src: "/lenses/capital.jpg",
     alt: "Investing newspaper page with a twenty dollar bill",
     label: "Capital",
-    left: "46%",
-    top: "0%",
-    w: 210,
-    h: 320,
-    rotate: 5,
-    depth: 14,
-    delay: 0.4,
-    z: 2,
+    motion: "animate-[kenburns-b_19s_ease-in-out_infinite_alternate]",
+    delay: 0.35,
   },
   {
     src: "/lenses/strategy.jpg",
     alt: "Dictionary entry for strategy",
     label: "Strategy",
-    left: "8%",
-    top: "52%",
-    w: 240,
-    h: 230,
-    rotate: 4,
-    depth: 20,
-    delay: 0.55,
-    z: 3,
+    motion: "animate-[kenburns-c_17s_ease-in-out_infinite_alternate]",
+    delay: 0.5,
   },
   {
     src: "/lenses/psychology.webp",
     alt: "Vintage anatomical brain engraving over dictionary print",
     label: "Psychology",
-    left: "52%",
-    top: "46%",
-    w: 220,
-    h: 300,
-    rotate: -4,
-    depth: 32,
-    delay: 0.7,
-    z: 4,
+    motion: "animate-[kenburns-d_21s_ease-in-out_infinite_alternate]",
+    delay: 0.65,
   },
 ];
 
-function CollageCard({
-  card,
-  mx,
-  my,
-  reduce,
-}: {
-  card: Card;
-  mx: MotionValue<number>;
-  my: MotionValue<number>;
-  reduce: boolean;
-}) {
-  const x = useTransform(mx, (v) => v * card.depth);
-  const y = useTransform(my, (v) => v * card.depth);
-
-  return (
-    <motion.div
-      className="absolute"
-      style={{ left: card.left, top: card.top, zIndex: card.z }}
-      initial={
-        reduce
-          ? false
-          : { opacity: 0, y: 90, rotate: card.rotate + 10, scale: 0.9 }
-      }
-      animate={{ opacity: 1, y: 0, rotate: card.rotate, scale: 1 }}
-      transition={{ duration: 1.1, ease: EASE_OUT, delay: card.delay }}
-    >
-      <motion.div style={reduce ? undefined : { x, y }}>
-        <div
-          className="group relative overflow-hidden rounded-xl border border-[var(--color-rule)] bg-[var(--color-paper-soft)] shadow-[0_48px_90px_-30px_rgba(0,0,0,0.85)] transition-transform duration-500 hover:scale-[1.04]"
-          style={{ width: card.w, height: card.h }}
-        >
-          <Image
-            src={card.src}
-            alt={card.alt}
-            fill
-            sizes={`${card.w}px`}
-            className="object-cover [filter:saturate(0.8)_contrast(1.05)] transition-[filter] duration-500 group-hover:[filter:none]"
-          />
-          <span className="absolute bottom-2.5 left-2.5 rounded bg-[rgba(14,13,11,0.78)] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-ink)]">
-            {card.label}
-          </span>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 /**
- * The four lens artifacts scattered like specimens on a desk. Staggered
- * entrance, gentle mouse parallax (each card at a different depth), and a
- * slow scroll drift. Static grid fallback under prefers-reduced-motion.
+ * The four lenses as a structured 2x2 grid of crisp rectangles, mirroring
+ * the logo mark. Each frame runs a slow Ken Burns loop so the stills read
+ * like looping video. Staggered entrance, slight drift on scroll.
  */
 export function HeroCollage({ className }: { className?: string }) {
   const reduce = useReducedMotion() ?? false;
   const ref = useRef<HTMLDivElement>(null);
-
-  const rawX = useMotionValue(0);
-  const rawY = useMotionValue(0);
-  const mx = useSpring(rawX, { stiffness: 60, damping: 16 });
-  const my = useSpring(rawY, { stiffness: 60, damping: 16 });
-
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
   });
-  const driftY = useTransform(scrollYProgress, [0, 1], [0, 110]);
-
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (reduce) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    rawX.set((e.clientX - rect.left) / rect.width - 0.5);
-    rawY.set((e.clientY - rect.top) / rect.height - 0.5);
-  }
+  const driftY = useTransform(scrollYProgress, [0, 1], [0, 70]);
 
   return (
     <motion.div
       ref={ref}
-      onPointerMove={onPointerMove}
       style={reduce ? undefined : { y: driftY }}
       className={className}
       aria-hidden
     >
-      <div className="relative h-[560px] w-[470px]">
+      <div className="grid grid-cols-2 gap-4">
         {cards.map((card) => (
-          <CollageCard
+          <motion.div
             key={card.src}
-            card={card}
-            mx={mx}
-            my={my}
-            reduce={reduce}
-          />
+            initial={reduce ? false : { opacity: 0, y: 44, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.9, ease: EASE_OUT, delay: card.delay }}
+          >
+            <div className="group relative h-[265px] w-[225px] overflow-hidden rounded-[4px] border border-[var(--color-rule)] bg-[var(--color-paper-soft)] shadow-[0_36px_70px_-28px_rgba(0,0,0,0.85)]">
+              <div className={`absolute inset-0 ${card.motion}`}>
+                <Image
+                  src={card.src}
+                  alt={card.alt}
+                  fill
+                  sizes="225px"
+                  className="object-cover [filter:saturate(0.82)_contrast(1.05)] transition-[filter] duration-500 group-hover:[filter:none]"
+                />
+              </div>
+              <span className="absolute bottom-2.5 left-2.5 rounded-[2px] bg-[rgba(14,13,11,0.8)] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-ink)]">
+                {card.label}
+              </span>
+            </div>
+          </motion.div>
         ))}
       </div>
     </motion.div>
