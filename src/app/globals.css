@@ -152,6 +152,15 @@ h1, h2, h3 {
     transform: translateX(-50%);
   }
 }
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+/* Reduced motion: the photo reel becomes a plain swipeable strip. */
+@media (prefers-reduced-motion: reduce) {
+  .photo-reel {
+    overflow-x: auto;
+  }
+}
 
 /* Gentle idle drift for the hero mark. */
 @keyframes float-soft {

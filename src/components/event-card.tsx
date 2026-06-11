@@ -38,31 +38,41 @@ export function EventCard({
 
       <div>
         {event.gallery && event.gallery.length > 0 ? (
-          // All event photos, scattered like prints on a desk. Scrolls
-          // sideways on small screens; each shot straightens on hover.
-          <div className="-mx-1 mb-7 flex gap-4 overflow-x-auto px-1 pb-3 pt-3 sm:gap-5 [scrollbar-width:thin]">
-            {event.gallery.map((src, i) => (
-              <div
-                key={src}
-                className={`relative shrink-0 overflow-hidden rounded-lg border border-[var(--color-rule)] bg-[var(--color-paper-soft)] shadow-[0_24px_48px_-20px_rgba(0,0,0,0.8)] transition-all duration-500 hover:z-10 hover:rotate-0 hover:scale-[1.05] ${
-                  i === 0
-                    ? "aspect-[4/3] w-64 sm:w-72"
-                    : "aspect-[3/4] w-40 sm:w-44"
-                } ${
-                  ["rotate-[-2deg]", "rotate-[1.6deg] translate-y-1.5", "rotate-[-1.2deg]", "rotate-[2.2deg] translate-y-1", "rotate-[-1.8deg] translate-y-2"][
-                    i % 5
-                  ]
-                }`}
-              >
-                <Image
-                  src={src}
-                  alt={`${event.title} photo ${i + 1}`}
-                  fill
-                  sizes="(min-width: 640px) 288px, 256px"
-                  className="object-cover [filter:saturate(0.92)] transition-[filter] duration-500 hover:[filter:none]"
-                />
-              </div>
-            ))}
+          // All event photos in a continuously scrolling reel (content is
+          // rendered twice for a seamless loop). Pauses on hover.
+          <div className="marquee photo-reel mb-7 py-2">
+            <div
+              className="marquee-track"
+              style={{ animationDuration: `${event.gallery.length * 7}s` }}
+            >
+              {[false, true].map((clone) => (
+                <div
+                  key={clone ? "clone" : "reel"}
+                  aria-hidden={clone}
+                  className="flex shrink-0 gap-5 pr-5"
+                >
+                  {event.gallery!.map((src, i) => (
+                    <div
+                      key={src}
+                      className={`relative shrink-0 overflow-hidden rounded-[4px] border border-[var(--color-rule)] bg-[var(--color-paper-soft)] shadow-[0_24px_48px_-20px_rgba(0,0,0,0.8)] transition-transform duration-500 hover:scale-[1.03] ${
+                        i === 0
+                          ? "aspect-[4/3] h-56 sm:h-64"
+                          : "aspect-[3/4] h-56 sm:h-64"
+                      }`}
+                    >
+                      <Image
+                        src={src}
+                        alt={clone ? "" : `${event.title} photo ${i + 1}`}
+                        fill
+                        quality={85}
+                        sizes="(min-width: 640px) 360px, 300px"
+                        className="object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         ) : event.coverImage ? (
           <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-xl border border-[var(--color-rule)] bg-[var(--color-paper-soft)]">
