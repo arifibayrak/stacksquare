@@ -61,7 +61,7 @@ export function SiteFooter() {
 
       {/* Oversized wordmark, clipped at the bottom edge of the page. */}
       <div aria-hidden className="pointer-events-none select-none">
-        <p className="translate-y-[22%] whitespace-nowrap px-4 text-center font-display text-[clamp(4.5rem,15.5vw,13rem)] italic leading-none tracking-tight text-[var(--color-ink)] opacity-[0.05]">
+        <p className="translate-y-[22%] whitespace-nowrap px-4 text-center font-mono text-[clamp(4rem,14vw,12rem)] font-semibold leading-none tracking-tight text-[var(--color-ink)] opacity-[0.16]">
           Stacksquare
         </p>
       </div>
