@@ -3,7 +3,7 @@ import { SubmissionForm } from "@/components/submission-form";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { FadeIn, MaskedLine, Reveal } from "@/components/motion/reveal";
 
-export const metadata = { title: "Contact · stacksquare" };
+export const metadata = { title: "Contact · Stacksquare" };
 
 const paths = [
   { id: "attend", label: "Attend" },
@@ -94,7 +94,7 @@ export default function ContactPage() {
                     Attend the <span className="italic">sessions</span>.
                   </>
                 }
-                blurb="Be in the room next time. Follow the stacksquare calendar on Luma to catch every session, or leave your email and we will write when a new room opens."
+                blurb="Be in the room next time. Follow the Stacksquare calendar on Luma to catch every session, or leave your email and we will write when a new room opens."
               />
               <div className="space-y-6">
                 {calendarUrl && (

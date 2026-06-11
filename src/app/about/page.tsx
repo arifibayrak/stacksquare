@@ -3,7 +3,7 @@ import { InitialsAvatar } from "@/components/initials-avatar";
 import { FadeIn, MaskedLine, Reveal } from "@/components/motion/reveal";
 
 export const metadata = {
-  title: "About · stacksquare",
+  title: "About · Stacksquare",
 };
 
 function FounderLinks({
@@ -63,12 +63,12 @@ export default function AboutPage() {
           </MaskedLine>
         </h1>
         <FadeIn delay={0.45}>
-          <p className="mt-8 max-w-2xl text-xl leading-relaxed text-[var(--color-ink-soft)] sm:text-2xl">
-            stacksquare is an events organization by two MSc Economics &amp;
+          <p className="mt-8 text-justify text-xl leading-relaxed text-[var(--color-ink-soft)] sm:text-2xl">
+            Stacksquare is an events organization by two MSc Economics &amp;
             Strategy students at Imperial Business School, on tech, capital,
             and the people who move them.
           </p>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[var(--color-ink-soft)]">
+          <p className="mt-5 text-justify text-lg leading-relaxed text-[var(--color-ink-soft)]">
             Fireside chats, expert sessions, and peer gatherings, each read
             through four lenses: technology stack, capital structure,
             strategic planning, and psychology.
@@ -90,11 +90,11 @@ export default function AboutPage() {
                 <h2 className="mt-2 font-display text-2xl font-medium text-[var(--color-ink)] sm:text-3xl">
                   Arif İsmail Bayrak
                 </h2>
-                <p className="mt-4 text-lg leading-relaxed text-[var(--color-ink-soft)]">
+                <p className="mt-4 text-justify text-lg leading-relaxed text-[var(--color-ink-soft)]">
                   Connecting builders and tech leaders together, with a
                   background in VC and AI venture studio.
                 </p>
-                <p className="mt-3 text-lg leading-relaxed text-[var(--color-ink-soft)]">
+                <p className="mt-3 text-justify text-lg leading-relaxed text-[var(--color-ink-soft)]">
                   At our events, Arif leads the tech and capital lens: deals,
                   financing, tech, and growth mechanics.
                 </p>
@@ -120,11 +120,11 @@ export default function AboutPage() {
                 <h2 className="mt-2 font-display text-2xl font-medium text-[var(--color-ink)] sm:text-3xl">
                   Kerem Özkefeli
                 </h2>
-                <p className="mt-4 text-lg leading-relaxed text-[var(--color-ink-soft)]">
+                <p className="mt-4 text-justify text-lg leading-relaxed text-[var(--color-ink-soft)]">
                   Bridges economics and psychology on one side; consulting,
                   private equity, and expert networks on the other.
                 </p>
-                <p className="mt-3 text-lg leading-relaxed text-[var(--color-ink-soft)]">
+                <p className="mt-3 text-justify text-lg leading-relaxed text-[var(--color-ink-soft)]">
                   At our events, Kerem leads the strategy and psychology
                   lenses: frameworks, decisions, tradeoffs, and how operators
                   actually think.
@@ -140,9 +140,9 @@ export default function AboutPage() {
           <Reveal>
             <section className="border-t border-[var(--color-rule)] pt-12">
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-                Why stacksquare
+                Why Stacksquare
               </p>
-              <p className="mt-4 max-w-2xl font-display text-2xl font-medium leading-snug text-[var(--color-ink)] sm:text-[1.7rem]">
+              <p className="mt-4 font-display text-2xl font-medium leading-snug text-[var(--color-ink)] sm:text-[1.7rem]">
                 Most events are pure tech or pure finance, pure panels or pure
                 networking. We sit at the intersection: tech and capital,
                 expert and peer, deep and quick.{" "}

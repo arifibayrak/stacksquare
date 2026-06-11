@@ -6,7 +6,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl space-y-10 px-6 py-14 text-base text-[var(--color-ink-muted)]">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink)]">
-            stacksquare
+            Stacksquare
           </p>
           <p className="mt-3 max-w-md leading-relaxed">
             An events organization. Fireside chats, expert sessions, and peer
@@ -61,8 +61,8 @@ export function SiteFooter() {
 
       {/* Oversized wordmark, clipped at the bottom edge of the page. */}
       <div aria-hidden className="pointer-events-none select-none">
-        <p className="translate-y-[22%] whitespace-nowrap px-4 text-center font-display text-[clamp(4.5rem,15.5vw,13rem)] lowercase italic leading-none tracking-tight text-[var(--color-ink)] opacity-[0.05]">
-          stacksquare
+        <p className="translate-y-[22%] whitespace-nowrap px-4 text-center font-display text-[clamp(4.5rem,15.5vw,13rem)] italic leading-none tracking-tight text-[var(--color-ink)] opacity-[0.05]">
+          Stacksquare
         </p>
       </div>
     </footer>

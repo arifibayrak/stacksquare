@@ -7,9 +7,9 @@ import { getPublishedEvents } from "@/lib/events";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Events · stacksquare",
+  title: "Events · Stacksquare",
   description:
-    "Upcoming and past stacksquare events. Founders, investors, and operators across the four lenses: technology stack, capital, strategy, and psychology.",
+    "Upcoming and past Stacksquare events. Founders, investors, and operators across the four lenses: technology stack, capital, strategy, and psychology.",
 };
 
 export default async function EventsPage() {

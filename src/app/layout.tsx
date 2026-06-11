@@ -22,18 +22,18 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "stacksquare · Events for founders, investors, and operators",
+  title: "Stacksquare · Events for founders, investors, and operators",
   description:
-    "stacksquare convenes founders, investors, and operators. Fireside rooms, expert sessions, and peer gatherings where strategy, capital, stack, and psychology meet. Register on Luma.",
+    "Stacksquare convenes founders, investors, and operators. Fireside rooms, expert sessions, and peer gatherings where strategy, capital, stack, and psychology meet. Register on Luma.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://stacksquare.ai",
   ),
   openGraph: {
-    title: "stacksquare",
+    title: "Stacksquare",
     description:
       "Events for founders, investors, and operators. Strategy meets capital.",
     url: "https://stacksquare.ai",
-    siteName: "stacksquare",
+    siteName: "Stacksquare",
     type: "website",
   },
 };
