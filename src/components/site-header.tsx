@@ -39,7 +39,7 @@ export function SiteHeader() {
             className="transition-transform duration-300 group-hover:rotate-[8deg] group-hover:scale-105"
           />
           <span className="font-mono text-lg font-semibold tracking-tight sm:text-xl">
-            Stack<span className="text-[var(--color-brand-500)]">square</span>
+            Stacksquare
           </span>
         </Link>
         <nav className="flex items-center gap-7 text-base">
