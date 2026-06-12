@@ -24,6 +24,8 @@ const CaptureEdit = z.object({
     .enum(["warm_1st", "warm_2nd", "cold"])
     .optional()
     .nullable(),
+  circle: z.enum(["inner", "reach", "moonshot"]).default("reach"),
+  capturedBy: z.enum(["arif", "kerem", "both"]).default("arif"),
 });
 
 /** Edit a queued capture's fields before promoting it. */
@@ -45,6 +47,8 @@ export async function updateCapture(id: string, raw: Record<string, string>) {
       phone: parsed.phone ?? null,
       seniority: parsed.seniority ?? null,
       relationship: parsed.relationship ?? null,
+      circle: parsed.circle,
+      capturedBy: parsed.capturedBy,
     })
     .where(eq(captures.id, id));
   revalidatePath("/admin/scout");
@@ -107,6 +111,7 @@ export async function promoteCapture(id: string) {
         phone: cap.phone,
         seniority: cap.seniority,
         owner: cap.capturedBy,
+        circle: cap.circle,
         source: "scout",
         notes,
       })

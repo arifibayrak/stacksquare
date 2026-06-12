@@ -303,6 +303,8 @@ export const captures = pgTable(
     email: text("email"),
     phone: text("phone"),
     seniority: seniorityEnum("seniority"),
+    // Set during queue triage; carried into the contact on promote.
+    circle: circleEnum("circle").default("reach").notNull(),
     // Raw parsed snapshot from the extension (positions, education, links).
     payload: jsonb("payload").notNull(),
     capturedBy: ownerEnum("captured_by").notNull(),
