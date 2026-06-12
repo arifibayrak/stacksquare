@@ -2,12 +2,52 @@
 
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { db, captures, contacts } from "@/db";
 
 async function requireUser() {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+}
+
+const CaptureEdit = z.object({
+  name: z.string().min(1),
+  role: z.string().optional().nullable(),
+  company: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  linkedinUrl: z.string().url(),
+  email: z.string().email().optional().or(z.literal("")).nullable(),
+  phone: z.string().optional().nullable(),
+  seniority: z.enum(["peer", "mid", "senior", "c_suite"]).optional().nullable(),
+  relationship: z
+    .enum(["warm_1st", "warm_2nd", "cold"])
+    .optional()
+    .nullable(),
+});
+
+/** Edit a queued capture's fields before promoting it. */
+export async function updateCapture(id: string, raw: Record<string, string>) {
+  await requireUser();
+  const clean: Record<string, string | null> = { ...raw };
+  for (const k of Object.keys(clean)) if (clean[k] === "") clean[k] = null;
+  const parsed = CaptureEdit.parse(clean);
+
+  await db
+    .update(captures)
+    .set({
+      name: parsed.name,
+      role: parsed.role ?? null,
+      company: parsed.company ?? null,
+      city: parsed.city ?? null,
+      linkedinUrl: parsed.linkedinUrl,
+      email: parsed.email ?? null,
+      phone: parsed.phone ?? null,
+      seniority: parsed.seniority ?? null,
+      relationship: parsed.relationship ?? null,
+    })
+    .where(eq(captures.id, id));
+  revalidatePath("/admin/scout");
 }
 
 /**

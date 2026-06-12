@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { db, captures } from "@/db";
 import { desc, eq, sql } from "drizzle-orm";
-import { formatDate } from "@/lib/utils";
-import { CaptureActions } from "./client";
+import { CaptureCard } from "./client";
 
 export const dynamic = "force-dynamic";
 
@@ -39,63 +38,7 @@ export default async function ScoutQueuePage() {
       ) : (
         <ul className="mt-8 space-y-3">
           {pending.map((c) => (
-            <li
-              key={c.id}
-              className="flex items-start justify-between gap-4 rounded-md border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <a
-                    href={c.linkedinUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium text-[var(--color-ink)] hover:text-brand-600"
-                  >
-                    {c.name} ↗
-                  </a>
-                  {c.relationship ? (
-                    <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                      {c.relationship.replace("_", " ")}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-1 truncate text-sm text-zinc-600 dark:text-zinc-300">
-                  {[c.role, c.company].filter(Boolean).join(" · ") ||
-                    c.headline ||
-                    "No role detected"}
-                  {c.city ? ` · ${c.city}` : ""}
-                </p>
-                {(c.email || c.phone) && (
-                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-                    {[c.email, c.phone].filter(Boolean).join(" · ")}
-                  </p>
-                )}
-                {(() => {
-                  const sites = (
-                    (c.payload as { websites?: unknown })?.websites ?? []
-                  ) as string[];
-                  return Array.isArray(sites) && sites.length ? (
-                    <p className="mt-1 flex flex-wrap gap-x-3 text-xs">
-                      {sites.slice(0, 4).map((s) => (
-                        <a
-                          key={s}
-                          href={s}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-brand-600 hover:underline"
-                        >
-                          {s.replace(/^https?:\/\/(www\.)?/, "").slice(0, 28)}
-                        </a>
-                      ))}
-                    </p>
-                  ) : null;
-                })()}
-                <p className="mt-1 text-xs text-zinc-500">
-                  Captured by {c.capturedBy} · {formatDate(c.capturedAt)}
-                </p>
-              </div>
-              <CaptureActions id={c.id} name={c.name} />
-            </li>
+            <CaptureCard key={c.id} capture={c} />
           ))}
         </ul>
       )}
