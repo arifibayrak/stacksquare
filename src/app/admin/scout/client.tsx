@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   promoteCapture,
@@ -92,9 +92,15 @@ function Select({
 
 export function CaptureCard({ capture: c }: { capture: Capture }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const sites = (((c.payload as { websites?: unknown })?.websites ??
     []) as string[]).filter((s) => typeof s === "string");
+
+  const summary =
+    [c.role, c.company].filter(Boolean).join(" · ") ||
+    c.headline ||
+    "No role detected";
 
   function values(): Record<string, string> {
     const fd = new FormData(formRef.current!);
@@ -106,20 +112,39 @@ export function CaptureCard({ capture: c }: { capture: Capture }) {
   }
 
   return (
-    <li className="rounded-md border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <a
-          href={c.linkedinUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="text-sm text-zinc-500 hover:text-brand-600"
+    <li className="rounded-md border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 px-5 py-4 text-left"
+      >
+        <span
+          className={
+            "text-xs text-zinc-400 transition-transform " +
+            (open ? "rotate-90" : "")
+          }
         >
-          Open on LinkedIn ↗
-        </a>
-        <span className="text-xs text-zinc-500">
-          Captured by {c.capturedBy} · {formatDate(c.capturedAt)}
+          ▶
         </span>
-      </div>
+        <span className="min-w-0 flex-1">
+          <span className="font-medium text-[var(--color-ink)]">{c.name}</span>
+          <span className="ml-2 truncate text-sm text-zinc-500">{summary}</span>
+        </span>
+        <span className="hidden shrink-0 text-xs text-zinc-400 sm:inline">
+          {c.capturedBy} · {formatDate(c.capturedAt)}
+        </span>
+      </button>
+
+      {open && (
+      <div className="border-t border-zinc-200 px-5 pb-5 pt-4 dark:border-zinc-800">
+      <a
+        href={c.linkedinUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="text-sm text-zinc-500 hover:text-brand-600"
+      >
+        Open on LinkedIn ↗
+      </a>
 
       <form ref={formRef} className="mt-4 grid gap-3 sm:grid-cols-2">
         <Field label="Name" name="name" defaultValue={c.name} />
@@ -234,6 +259,8 @@ export function CaptureCard({ capture: c }: { capture: Capture }) {
           Dismiss
         </button>
       </div>
+      </div>
+      )}
     </li>
   );
 }
