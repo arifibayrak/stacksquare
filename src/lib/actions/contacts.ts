@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
-import { db, contacts, touchLog, STAGES } from "@/db";
+import { db, contacts, touchLog, submissions, aiRuns, STAGES } from "@/db";
 
 const SENIORITY = ["peer", "mid", "senior", "c_suite"] as const;
 const RELATIONSHIP = ["warm_1st", "warm_2nd", "cold"] as const;
@@ -146,6 +146,18 @@ export async function setContactCircle(
 export async function deleteContact(id: string) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  // Detach rows that reference the contact without a cascade rule
+  // (inbox submissions and AI runs keep their history, unlinked),
+  // otherwise Postgres rejects the delete with an FK violation.
+  await db
+    .update(submissions)
+    .set({ contactId: null })
+    .where(eq(submissions.contactId, id));
+  await db
+    .update(aiRuns)
+    .set({ contactId: null })
+    .where(eq(aiRuns.contactId, id));
 
   await db.delete(contacts).where(eq(contacts.id, id));
   revalidatePath("/admin/contacts");

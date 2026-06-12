@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 import {
   logTouch,
   deleteContact,
@@ -146,7 +147,16 @@ export function DeleteContactButton({ id }: { id: string }) {
   const [pending, start] = useTransition();
   function onClick() {
     if (!confirm("Delete this contact and all touch history?")) return;
-    start(() => deleteContact(id));
+    start(async () => {
+      try {
+        await deleteContact(id);
+      } catch (err) {
+        // Next's redirect() rejects with a control-flow error; let it pass.
+        if (err instanceof Error && err.message.includes("NEXT_REDIRECT"))
+          throw err;
+        toast.error("Delete failed. Try again or check linked records.");
+      }
+    });
   }
   return (
     <button
