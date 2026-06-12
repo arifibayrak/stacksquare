@@ -21,6 +21,9 @@ const Payload = z.object({
   city: z.string().max(300).optional().nullable(),
   headline: z.string().max(500).optional().nullable(),
   relationship: z.enum(["warm_1st", "warm_2nd", "cold"]).optional().nullable(),
+  email: z.string().email().max(320).optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+  seniority: z.enum(["peer", "mid", "senior", "c_suite"]).optional().nullable(),
   // Raw snapshot: positions, education, links, parser metadata.
   payload: z.record(z.string(), z.unknown()).default({}),
 });
@@ -103,6 +106,9 @@ export async function POST(request: Request) {
       city: p.city ?? null,
       headline: p.headline ?? null,
       relationship: p.relationship ?? null,
+      email: p.email ?? null,
+      phone: p.phone ?? null,
+      seniority: p.seniority ?? null,
       payload: p.payload,
       capturedBy: owner,
     })
@@ -115,6 +121,11 @@ export async function POST(request: Request) {
         city: p.city ?? null,
         headline: p.headline ?? null,
         relationship: p.relationship ?? null,
+        // Manual fields only overwrite when provided, so a later silent
+        // auto-capture does not wipe an email typed into the panel.
+        email: sql`coalesce(${p.email ?? null}, ${captures.email})`,
+        phone: sql`coalesce(${p.phone ?? null}, ${captures.phone})`,
+        seniority: sql`coalesce(${p.seniority ?? null}, ${captures.seniority})`,
         payload: p.payload,
         capturedBy: owner,
         capturedAt: sql`now()`,

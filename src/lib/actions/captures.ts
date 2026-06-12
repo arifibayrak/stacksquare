@@ -35,6 +35,9 @@ export async function promoteCapture(id: string) {
         company: existing.company ?? cap.company,
         city: existing.city ?? cap.city,
         relationship: existing.relationship ?? cap.relationship,
+        email: existing.email ?? cap.email,
+        phone: existing.phone ?? cap.phone,
+        seniority: existing.seniority ?? cap.seniority,
         updatedAt: new Date(),
       })
       .where(eq(contacts.id, existing.id));
@@ -49,6 +52,9 @@ export async function promoteCapture(id: string) {
         city: cap.city,
         linkedinUrl: cap.linkedinUrl,
         relationship: cap.relationship,
+        email: cap.email,
+        phone: cap.phone,
+        seniority: cap.seniority,
         owner: cap.capturedBy,
         source: "scout",
         notes: cap.headline ? `Headline: ${cap.headline}` : null,

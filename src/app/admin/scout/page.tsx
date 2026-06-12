@@ -65,6 +65,11 @@ export default async function ScoutQueuePage() {
                     "No role detected"}
                   {c.city ? ` · ${c.city}` : ""}
                 </p>
+                {(c.email || c.phone) && (
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+                    {[c.email, c.phone].filter(Boolean).join(" · ")}
+                  </p>
+                )}
                 <p className="mt-1 text-xs text-zinc-500">
                   Captured by {c.capturedBy} · {formatDate(c.capturedAt)}
                 </p>

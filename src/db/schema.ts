@@ -299,6 +299,10 @@ export const captures = pgTable(
     city: text("city"),
     headline: text("headline"),
     relationship: relationshipEnum("relationship"),
+    // Manually entered in the extension panel; LinkedIn rarely exposes these.
+    email: text("email"),
+    phone: text("phone"),
+    seniority: seniorityEnum("seniority"),
     // Raw parsed snapshot from the extension (positions, education, links).
     payload: jsonb("payload").notNull(),
     capturedBy: ownerEnum("captured_by").notNull(),
