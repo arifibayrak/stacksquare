@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
+import { generateText, Output } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { db, captures } from "@/db";
+import { env } from "@/lib/env";
 
 // Receives profile snapshots from the Stacksquare Scout extension.
 // Auth: per-person API keys (X-API-Key header) so every capture is
@@ -26,7 +29,35 @@ const Payload = z.object({
   seniority: z.enum(["peer", "mid", "senior", "c_suite"]).optional().nullable(),
   // Raw snapshot: positions, education, links, parser metadata.
   payload: z.record(z.string(), z.unknown()).default({}),
+  // Visible page text; the server extracts missing fields from it with AI,
+  // which survives any LinkedIn DOM reshuffle.
+  pageText: z.string().max(40000).optional().nullable(),
 });
+
+const Extracted = z.object({
+  name: z.string().nullable(),
+  role: z.string().nullable(),
+  company: z.string().nullable(),
+  city: z.string().nullable(),
+  headline: z.string().nullable(),
+});
+
+async function aiExtract(pageText: string) {
+  const { output } = await generateText({
+    model: anthropic(env.modelFast()),
+    output: Output.object({ schema: Extracted }),
+    system:
+      "You extract CRM fields from the visible text of a LinkedIn profile page. " +
+      "Return the profile owner's full name, their current primary role title, " +
+      "the company of that role, and their city/location (short form, e.g. 'London'). " +
+      "headline is the short tagline under their name. " +
+      "Prefer the most recent position marked Present. Ignore navigation text, " +
+      "ads, 'people also viewed', and any profiles other than the page owner. " +
+      "Use null when a field is genuinely absent.",
+    prompt: pageText,
+  });
+  return output;
+}
 
 function ownerForKey(key: string | null): "arif" | "kerem" | null {
   if (!key) return null;
@@ -94,6 +125,23 @@ export async function POST(request: Request) {
   const p = parsed.data;
   const linkedinUrl = p.linkedinUrl.split("?")[0].replace(/\/$/, "");
 
+  // Client parser comes first; AI fills whatever it missed.
+  let aiUsed = false;
+  if (p.pageText && (!p.role || !p.company || !p.city)) {
+    try {
+      const x = await aiExtract(p.pageText);
+      p.name = p.name || x.name || p.name;
+      p.role = p.role ?? x.role;
+      p.company = p.company ?? x.company;
+      p.city = p.city ?? x.city;
+      p.headline = p.headline ?? x.headline;
+      aiUsed = true;
+    } catch (err) {
+      console.error("[capture] ai extract failed", err);
+    }
+  }
+  const payload = { ...p.payload, aiExtracted: aiUsed };
+
   // One row per profile: re-capturing refreshes the snapshot. Status is
   // preserved so dismissed people stay dismissed and promoted stay promoted.
   const [row] = await db
@@ -109,7 +157,7 @@ export async function POST(request: Request) {
       email: p.email ?? null,
       phone: p.phone ?? null,
       seniority: p.seniority ?? null,
-      payload: p.payload,
+      payload,
       capturedBy: owner,
     })
     .onConflictDoUpdate({
@@ -126,7 +174,7 @@ export async function POST(request: Request) {
         email: sql`coalesce(${p.email ?? null}, ${captures.email})`,
         phone: sql`coalesce(${p.phone ?? null}, ${captures.phone})`,
         seniority: sql`coalesce(${p.seniority ?? null}, ${captures.seniority})`,
-        payload: p.payload,
+        payload,
         capturedBy: owner,
         capturedAt: sql`now()`,
       },
