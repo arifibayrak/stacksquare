@@ -70,6 +70,26 @@ export default async function ScoutQueuePage() {
                     {[c.email, c.phone].filter(Boolean).join(" · ")}
                   </p>
                 )}
+                {(() => {
+                  const sites = (
+                    (c.payload as { websites?: unknown })?.websites ?? []
+                  ) as string[];
+                  return Array.isArray(sites) && sites.length ? (
+                    <p className="mt-1 flex flex-wrap gap-x-3 text-xs">
+                      {sites.slice(0, 4).map((s) => (
+                        <a
+                          key={s}
+                          href={s}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-brand-600 hover:underline"
+                        >
+                          {s.replace(/^https?:\/\/(www\.)?/, "").slice(0, 28)}
+                        </a>
+                      ))}
+                    </p>
+                  ) : null;
+                })()}
                 <p className="mt-1 text-xs text-zinc-500">
                   Captured by {c.capturedBy} · {formatDate(c.capturedAt)}
                 </p>

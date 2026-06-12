@@ -26,6 +26,15 @@ export async function promoteCapture(id: string) {
     .from(contacts)
     .where(eq(contacts.linkedinUrl, cap.linkedinUrl));
 
+  // Links harvested from the contact-info overlay ride in the payload.
+  const payload = (cap.payload ?? {}) as { websites?: unknown };
+  const websites = Array.isArray(payload.websites)
+    ? (payload.websites as string[]).filter((w) => typeof w === "string")
+    : [];
+  const linksNote = websites.length ? `Links: ${websites.join(", ")}` : "";
+  const headlineNote = cap.headline ? `Headline: ${cap.headline}` : "";
+  const notes = [headlineNote, linksNote].filter(Boolean).join("\n") || null;
+
   let contactId: string;
   if (existing) {
     await db
@@ -38,6 +47,8 @@ export async function promoteCapture(id: string) {
         email: existing.email ?? cap.email,
         phone: existing.phone ?? cap.phone,
         seniority: existing.seniority ?? cap.seniority,
+        // Append harvested links if the contact has no notes yet.
+        notes: existing.notes ?? notes,
         updatedAt: new Date(),
       })
       .where(eq(contacts.id, existing.id));
@@ -57,7 +68,7 @@ export async function promoteCapture(id: string) {
         seniority: cap.seniority,
         owner: cap.capturedBy,
         source: "scout",
-        notes: cap.headline ? `Headline: ${cap.headline}` : null,
+        notes,
       })
       .returning({ id: contacts.id });
     contactId = row.id;
