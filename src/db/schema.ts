@@ -110,6 +110,12 @@ export const costCategoryEnum = pgEnum("cost_category", [
   "other",
 ]);
 
+export const captureStatusEnum = pgEnum("capture_status", [
+  "pending",
+  "promoted",
+  "dismissed",
+]);
+
 export const contacts = pgTable(
   "contacts",
   {
@@ -263,6 +269,41 @@ export const quadrantSubscribers = pgTable(
       .notNull(),
   },
   (t) => [uniqueIndex("quadrant_subscribers_email_idx").on(t.email)],
+);
+
+// LinkedIn profiles captured by the Stacksquare Scout extension while a
+// founder browses with the capture switch on. One row per profile URL;
+// re-capturing the same profile refreshes the snapshot. Rows enter the
+// contacts table only when promoted from the admin Scout queue.
+export const captures = pgTable(
+  "captures",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    linkedinUrl: text("linkedin_url").notNull(),
+    name: text("name").notNull(),
+    role: text("role"),
+    company: text("company"),
+    city: text("city"),
+    headline: text("headline"),
+    relationship: relationshipEnum("relationship"),
+    // Raw parsed snapshot from the extension (positions, education, links).
+    payload: jsonb("payload").notNull(),
+    capturedBy: ownerEnum("captured_by").notNull(),
+    status: captureStatusEnum("status").default("pending").notNull(),
+    contactId: uuid("contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    capturedAt: timestamp("captured_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("captures_linkedin_url_idx").on(t.linkedinUrl),
+    index("captures_status_idx").on(t.status),
+  ],
 );
 
 // Internal venue address book. Never rendered on the public site; the
@@ -452,6 +493,7 @@ export const aiRuns = pgTable("ai_runs", {
 });
 
 export type Contact = typeof contacts.$inferSelect;
+export type Capture = typeof captures.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
 export type TouchLog = typeof touchLog.$inferSelect;
 export type OutreachTemplate = typeof outreachTemplates.$inferSelect;

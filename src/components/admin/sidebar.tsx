@@ -30,7 +30,10 @@ const sections = [
   },
   {
     label: "Inbox",
-    links: [{ href: "/admin/submissions", label: "Submissions" }],
+    links: [
+      { href: "/admin/submissions", label: "Submissions" },
+      { href: "/admin/scout", label: "Scout queue" },
+    ],
   },
   {
     label: "The Quadrant",
