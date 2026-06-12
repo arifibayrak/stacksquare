@@ -37,7 +37,10 @@ const sections = [
   },
   {
     label: "The Quadrant",
-    links: [{ href: "/admin/quadrant", label: "Subscribers" }],
+    links: [
+      { href: "/admin/quadrant", label: "Subscribers" },
+      { href: "/admin/quadrant/messages", label: "Messages" },
+    ],
   },
   {
     label: "AI",

@@ -271,6 +271,19 @@ export const quadrantSubscribers = pgTable(
   (t) => [uniqueIndex("quadrant_subscribers_email_idx").on(t.email)],
 );
 
+// Contact-form messages from thequadrant.fm. Separate from StackSquare's
+// own submissions inbox; The Quadrant public site writes here directly.
+export const quadrantMessages = pgTable("quadrant_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  message: text("message").notNull(),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 // LinkedIn profiles captured by the Stacksquare Scout extension while a
 // founder browses with the capture switch on. One row per profile URL;
 // re-capturing the same profile refreshes the snapshot. Rows enter the
