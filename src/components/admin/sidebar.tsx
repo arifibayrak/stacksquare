@@ -33,6 +33,10 @@ const sections = [
     links: [{ href: "/admin/submissions", label: "Submissions" }],
   },
   {
+    label: "The Quadrant",
+    links: [{ href: "/admin/quadrant", label: "Subscribers" }],
+  },
+  {
     label: "AI",
     links: [
       { href: "/admin/ai/enrich", label: "Enrich contact" },

@@ -250,6 +250,21 @@ export const subscribers = pgTable(
   (t) => [uniqueIndex("subscribers_email_idx").on(t.email)],
 );
 
+// Subscribers of The Quadrant (thequadrant.fm). The Quadrant public site
+// writes here directly; kept separate from StackSquare's own list so the
+// two audiences never mix.
+export const quadrantSubscribers = pgTable(
+  "quadrant_subscribers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: text("email").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [uniqueIndex("quadrant_subscribers_email_idx").on(t.email)],
+);
+
 // Internal venue address book. Never rendered on the public site; the
 // public-facing place string stays in events.location.
 export const venues = pgTable("venues", {
