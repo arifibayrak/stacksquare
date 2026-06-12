@@ -7,6 +7,7 @@ import {
   TouchLogForm,
   DeleteContactButton,
   ContactQuickActions,
+  FindContactInfoButton,
 } from "./client";
 import { formatDate } from "@/lib/utils";
 
@@ -51,7 +52,10 @@ export default async function ContactDetail({
             </p>
           )}
         </div>
-        <DeleteContactButton id={contact.id} />
+        <div className="flex shrink-0 gap-2">
+          <FindContactInfoButton id={contact.id} />
+          <DeleteContactButton id={contact.id} />
+        </div>
       </div>
 
       <div className="mt-4">

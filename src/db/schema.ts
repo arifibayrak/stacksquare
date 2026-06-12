@@ -73,6 +73,7 @@ export const aiRunKindEnum = pgEnum("ai_run_kind", [
   "draft_outreach",
   "summarize_transcript",
   "clip_suggestions",
+  "find_contact_info",
 ]);
 
 export const eventStatusEnum = pgEnum("event_status", [

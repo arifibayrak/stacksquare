@@ -11,7 +11,35 @@ import {
   setContactCircle,
 } from "@/lib/actions/contacts";
 import { QuickPill } from "@/components/admin/quick-pill";
+import { findContactInfo } from "@/lib/actions/enrich";
 import { STAGES, STAGE_LABELS, CIRCLES, CIRCLE_LABELS } from "@/db/schema";
+
+export function FindContactInfoButton({ id }: { id: string }) {
+  const [pending, start] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() =>
+        start(async () => {
+          try {
+            const out = await findContactInfo(id);
+            toast.success(
+              out.email
+                ? `Found ${out.email} (${out.emailConfidence ?? "?"})`
+                : "Search done. See notes for what was found.",
+            );
+          } catch {
+            toast.error("Enrichment failed");
+          }
+        })
+      }
+      className="rounded-md border border-[var(--color-rule)] px-3 py-1.5 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-paper-soft)] disabled:opacity-50"
+    >
+      {pending ? "Searching…" : "Find contact info"}
+    </button>
+  );
+}
 
 export function ContactQuickActions({
   id,
