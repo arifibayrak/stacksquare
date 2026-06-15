@@ -251,6 +251,35 @@ export default async function HomePage() {
           </div>
         </section>
 
+        <section className="border-t border-[var(--color-rule)]">
+          <div className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
+            <Reveal>
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+                The manifesto
+              </p>
+              <p className="mt-8 max-w-3xl font-display text-2xl font-medium leading-[1.2] text-[var(--color-ink)] sm:text-[2rem]">
+                There&rsquo;s a specific kind of conversation that only happens
+                in person.{" "}
+                <span className="italic text-[var(--color-ink-muted)]">
+                  The one that actually changes something.
+                </span>
+              </p>
+              <Link
+                href="/manifesto"
+                className="group mt-10 inline-flex items-center gap-2 text-base text-[var(--color-ink-soft)] transition-colors hover:text-[var(--color-ink)]"
+              >
+                <span className="draw-link">Why Stacksquare exists</span>
+                <span
+                  aria-hidden
+                  className="transition-transform duration-300 group-hover:translate-x-1"
+                >
+                  →
+                </span>
+              </Link>
+            </Reveal>
+          </div>
+        </section>
+
         <section className="mx-auto max-w-6xl px-6 py-20 sm:py-24">
           <Reveal>
             <div className="relative overflow-hidden rounded-2xl border border-[var(--color-rule)] bg-[rgba(24,21,17,0.55)] px-8 py-16 text-center backdrop-blur-sm sm:px-16 sm:py-20">

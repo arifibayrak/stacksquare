@@ -7,6 +7,7 @@ import { LogoMark } from "@/components/logo-mark";
 
 const links = [
   { href: "/events", label: "Events" },
+  { href: "/manifesto", label: "Manifesto" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
