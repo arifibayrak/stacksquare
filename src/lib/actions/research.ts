@@ -53,6 +53,27 @@ function canonicalLinkedin(url: string | null | undefined): string | null {
   return `https://${u}`;
 }
 
+// Best-effort usage capture for the Usage & cost page. Defensive: unknown
+// shapes yield zeros rather than throwing.
+function usageTokens(u: unknown): { inputTokens: number; outputTokens: number } {
+  const uu = (u ?? {}) as { inputTokens?: number; outputTokens?: number };
+  return { inputTokens: uu.inputTokens ?? 0, outputTokens: uu.outputTokens ?? 0 };
+}
+
+function countWebSearches(steps: unknown): number {
+  if (!Array.isArray(steps)) return 0;
+  let n = 0;
+  for (const s of steps) {
+    const calls = (s as { toolCalls?: unknown[] }).toolCalls;
+    if (Array.isArray(calls)) {
+      for (const c of calls) {
+        if ((c as { toolName?: string }).toolName === "web_search") n++;
+      }
+    }
+  }
+  return n;
+}
+
 // ---------------------------------------------------------------------------
 // Segments
 // ---------------------------------------------------------------------------
@@ -311,22 +332,30 @@ const DISCOVER_RESEARCH_SYSTEM =
   "search over public sources (Crunchbase, Dealroom, Sifted, company team/about " +
   "pages, accelerator cohort pages, conference speaker lists, reputable news) to " +
   "find REAL, currently-active people who match the target below. For each " +
-  "person, write their name, title, company, city, LinkedIn URL if found, a " +
-  "public SOURCE URL that verifies them, a one-line bio, and any evidence about " +
-  "their origin/heritage and where they are currently based. Never invent people " +
-  "or emails. Only give a business email if it is publicly published. Prefer " +
-  "PRECISION over recall: a shorter list of well-sourced people beats plausible " +
-  "guesses. Write your findings as a clear, structured list.";
+  "person, write their name, title, company, LinkedIn URL, a public SOURCE URL " +
+  "that verifies them, a one-line bio, evidence about their origin/heritage, and " +
+  "their CURRENT city. VERIFY the current city primarily from their LinkedIn " +
+  "profile location, which is the single most reliable signal; corroborate with " +
+  "company HQ and recent public activity. If a target location is given, only " +
+  "include people whose LinkedIn (or equally strong public evidence) places them " +
+  "living/working there NOW; exclude people who merely have past ties, a company " +
+  "office there, or are based in another city. State each person's location " +
+  "evidence explicitly. Never invent people or emails; only give a business " +
+  "email if publicly published. Prefer PRECISION over recall: a shorter, " +
+  "correctly-located list beats plausible guesses. Write findings as a clear list.";
 
 const DISCOVER_EXTRACT_SYSTEM =
   "Extract structured candidates from the research notes. Return one entry per " +
   "real person the notes describe. Only include a person if the notes give a " +
   "public source URL for them. Use null for any field the notes do not support; " +
   "never invent data (especially emails). originSignal = how strongly the notes " +
-  "match the target origin/heritage; locationSignal = how strongly the notes " +
-  "place the person in the target location. Judge both honestly (high/medium/low) " +
-  "so a reviewer can filter. suggestedTier: a = clear high-signal match, b = " +
-  "solid fit, c = adjacent / peripheral.";
+  "match the target origin/heritage. locationSignal = how strongly the notes " +
+  "place the person CURRENTLY in the target location: set it to high or medium " +
+  "ONLY when the person's LinkedIn profile location (or equally strong public " +
+  "evidence) shows they are based there now; set it to low if their current city " +
+  "is elsewhere or unclear, even if they have past ties or a company office " +
+  "there. Judge both signals honestly. suggestedTier: a = clear high-signal " +
+  "match, b = solid fit, c = adjacent / peripheral.";
 
 export async function discoverProspects(
   segmentId: string,
@@ -355,6 +384,9 @@ export async function discoverProspects(
     .join("\n");
 
   const model = env.modelFast();
+  let tokensIn = 0;
+  let tokensOut = 0;
+  let webSearches = 0;
 
   // Phase 1: research the open web, free-form.
   let notes = "";
@@ -369,6 +401,10 @@ export async function discoverProspects(
       prompt: `Research the public web and compile a list of real people who match this target:\n${promptBrief}`,
     });
     notes = research.text?.trim() ?? "";
+    const u = usageTokens(research.totalUsage);
+    tokensIn += u.inputTokens;
+    tokensOut += u.outputTokens;
+    webSearches += countWebSearches(research.steps);
     if (!notes) throw new Error("web search returned no usable text");
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown";
@@ -391,6 +427,9 @@ export async function discoverProspects(
       prompt: `Target criteria:\n${promptBrief}\n\nResearch notes:\n\n${notes}\n\nReturn every real person from these notes as a structured candidate.`,
     });
     candidates = extracted.object.candidates;
+    const u = usageTokens(extracted.usage);
+    tokensIn += u.inputTokens;
+    tokensOut += u.outputTokens;
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown";
     await db.insert(aiRuns).values({
@@ -402,10 +441,20 @@ export async function discoverProspects(
     throw new Error(`Discovery parse failed: ${message}`);
   }
 
-  // Precision gate (not a location filter): keep only people with a name and a
-  // verifiable public source URL. Origin/location fit is surfaced as signals for
-  // the reviewer to sort and filter, not silently dropped.
-  const usable = candidates.filter((c) => c.name && c.sourceUrl);
+  // Precision gate. Always require a name + verifiable public source URL. When a
+  // target location was specified, also require a medium+ location signal, so we
+  // only keep people who can actually be placed there (LinkedIn-verified) rather
+  // than people with mere ties. With no location set, keep all and surface the
+  // signal for manual review.
+  const locationRequired = Boolean(p.location);
+  const usable = candidates.filter(
+    (c) =>
+      c.name &&
+      c.sourceUrl &&
+      (!locationRequired ||
+        c.locationSignal === "high" ||
+        c.locationSignal === "medium"),
+  );
   const dropped = candidates.length - usable.length;
 
   let added = 0;
@@ -476,8 +525,17 @@ export async function discoverProspects(
   await db.insert(aiRuns).values({
     kind: "discover_prospects",
     input: { segmentId, brief: promptBrief },
-    output: { count: candidates.length, usable: usable.length, dropped, added, linked },
+    output: {
+      count: candidates.length,
+      usable: usable.length,
+      dropped,
+      added,
+      linked,
+      webSearches,
+    },
     model,
+    tokensIn,
+    tokensOut,
   });
 
   revalidatePath(`/admin/research/${segmentId}`);
@@ -538,6 +596,9 @@ export async function enrichProspect(prospectId: string) {
     .join("\n");
 
   const model = env.modelFast();
+  let tokensIn = 0;
+  let tokensOut = 0;
+  let webSearches = 0;
 
   // Phase 1: research the open web, free-form.
   let notes = "";
@@ -552,6 +613,10 @@ export async function enrichProspect(prospectId: string) {
       prompt: `Research this person for a market map and report what you find:\n${profile}`,
     });
     notes = research.text?.trim() ?? "";
+    const u = usageTokens(research.totalUsage);
+    tokensIn += u.inputTokens;
+    tokensOut += u.outputTokens;
+    webSearches += countWebSearches(research.steps);
     if (!notes) throw new Error("web search returned no usable text");
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown";
@@ -575,6 +640,9 @@ export async function enrichProspect(prospectId: string) {
       prompt: `Person:\n${profile}\n\nResearch notes:\n${notes}\n\nExtract the structured fields.`,
     });
     out = extracted.object;
+    const u = usageTokens(extracted.usage);
+    tokensIn += u.inputTokens;
+    tokensOut += u.outputTokens;
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown";
     await db.insert(aiRuns).values({
@@ -627,8 +695,10 @@ export async function enrichProspect(prospectId: string) {
     kind: "enrich_prospect",
     contactId: p.contactId ?? null,
     input: { prospectId, profile },
-    output: out,
+    output: { ...out, webSearches },
     model,
+    tokensIn,
+    tokensOut,
   });
 
   const mems = await db

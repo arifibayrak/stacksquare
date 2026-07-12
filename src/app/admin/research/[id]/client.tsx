@@ -117,7 +117,7 @@ export function DiscoverForm({ segmentId }: { segmentId: string }) {
         });
         toast.success(
           `Discovery: ${r.linked} added · ${r.added} new${
-            r.dropped ? ` · ${r.dropped} skipped (no source)` : ""
+            r.dropped ? ` · ${r.dropped} skipped (no source / off-location)` : ""
           }`,
         );
       } catch (e) {
