@@ -32,8 +32,8 @@ export default async function ResearchPage() {
             Discover
           </h1>
           <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-            Targeted people-lists. Search the web, check the good ones into your
-            Database, then add them to Contacts.
+            Targeted people-lists. Search the web, verify the real targets, then
+            add them to Contacts.
           </p>
         </div>
         <Link
@@ -79,7 +79,7 @@ export default async function ResearchPage() {
                   </p>
                 )}
                 <p className="mt-3 font-mono text-xs text-[var(--color-ink-muted)]">
-                  {total(s.id)} people · {checked(s.id)} checked ·{" "}
+                  {total(s.id)} people · {checked(s.id)} verified ·{" "}
                   {promoted(s.id)} in contacts
                 </p>
               </Link>

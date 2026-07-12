@@ -9,10 +9,6 @@ import {
   prospects,
   PROSPECT_ROLES,
   PROSPECT_ROLE_LABELS,
-  PROSPECT_TIERS,
-  PROSPECT_TIER_LABELS,
-  PROSPECT_STATUSES,
-  PROSPECT_STATUS_LABELS,
 } from "@/db";
 import {
   SeedForm,
@@ -25,21 +21,32 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function Stat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-lg border border-[var(--color-rule)] bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="text-lg font-semibold text-[var(--color-ink)]">
-        {value}
-      </div>
-      <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--color-ink-muted)]">
-        {label}
-      </div>
-    </div>
-  );
-}
-
 const selectCls =
   "rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-zinc-700 dark:bg-zinc-900";
+
+function Tab({
+  href,
+  active,
+  label,
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={
+        "border-b-2 px-3 py-2 text-sm " +
+        (active
+          ? "border-[var(--color-ink)] font-medium text-[var(--color-ink)]"
+          : "border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]")
+      }
+    >
+      {label}
+    </Link>
+  );
+}
 
 export default async function SegmentPage({
   params,
@@ -48,20 +55,13 @@ export default async function SegmentPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{
     q?: string;
-    tier?: string;
-    status?: string;
     role?: string;
     run?: string;
+    view?: string;
   }>;
 }) {
   const { id } = await params;
-  const {
-    q = "",
-    tier = "",
-    status = "",
-    role = "",
-    run = "",
-  } = await searchParams;
+  const { q = "", role = "", run = "", view = "" } = await searchParams;
 
   const [seg] = await db.select().from(segments).where(eq(segments.id, id));
   if (!seg) notFound();
@@ -84,7 +84,7 @@ export default async function SegmentPage({
     .from(segmentMembers)
     .innerJoin(prospects, eq(segmentMembers.prospectId, prospects.id))
     .where(eq(segmentMembers.segmentId, id))
-    .orderBy(asc(segmentMembers.tier), asc(prospects.name))
+    .orderBy(asc(prospects.name))
     .limit(500);
 
   const rows: Row[] = members.map((m) => ({
@@ -108,8 +108,15 @@ export default async function SegmentPage({
     runSeq: m.runId ? (runSeqById.get(m.runId) ?? null) : null,
   }));
 
-  // Live count of current members per run (for the run cards), and how many are
-  // ungrouped (added before search tracking, or seeded manually).
+  // Dismissed people are hidden from the working views.
+  const activeRows = rows.filter((r) => r.status !== "dismissed");
+  const verifiedCount = rows.filter((r) => r.status === "qualified").length;
+  const inContactsCount = rows.filter((r) => r.promoted).length;
+  const toReviewCount = rows.filter(
+    (r) => r.status === "discovered" || r.status === "enriched",
+  ).length;
+
+  // Per-run live counts + ungrouped, for the (collapsed) Searches panel.
   const liveByRun = new Map<string, number>();
   let ungroupedCount = 0;
   for (const r of rows) {
@@ -129,21 +136,11 @@ export default async function SegmentPage({
     liveCount: liveByRun.get(r.id) ?? 0,
   }));
 
-  const byTier: Record<string, number> = { a: 0, b: 0, c: 0, untiered: 0 };
-  const byStatus: Record<string, number> = {};
-  const byRole: Record<string, number> = {};
-  for (const r of rows) {
-    if (r.tier) byTier[r.tier] = (byTier[r.tier] ?? 0) + 1;
-    else byTier.untiered++;
-    byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
-    for (const role of r.roles) byRole[role] = (byRole[role] ?? 0) + 1;
-  }
-
-  const filtered = rows.filter((r) => {
+  const checkedView = view === "checked";
+  const filtered = activeRows.filter((r) => {
+    if (checkedView && r.status !== "qualified") return false;
     if (run === "none" && r.runId) return false;
     if (run && run !== "none" && r.runId !== run) return false;
-    if (tier && r.tier !== tier) return false;
-    if (status && r.status !== status) return false;
     if (role && !r.roles.includes(role)) return false;
     if (q) {
       const hay = `${r.name} ${r.company ?? ""} ${r.title ?? ""}`.toLowerCase();
@@ -152,13 +149,22 @@ export default async function SegmentPage({
     return true;
   });
 
-  const isFiltered = Boolean(q || tier || status || role || run);
+  const isFiltered = Boolean(q || role || run);
   const activeRunLabel =
     run === "none"
       ? "Ungrouped"
       : run
         ? `Search #${runSeqById.get(run) ?? "?"}`
         : "";
+
+  const tabHref = (v: string) => {
+    const sp = new URLSearchParams();
+    if (v) sp.set("view", v);
+    if (q) sp.set("q", q);
+    if (role) sp.set("role", role);
+    const qs = sp.toString();
+    return `/admin/research/${seg.id}${qs ? `?${qs}` : ""}`;
+  };
 
   return (
     <div className="px-8 py-10">
@@ -177,67 +183,80 @@ export default async function SegmentPage({
         </p>
       )}
 
-      {/* The picture: counts by tier / role / status */}
-      <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
-        <Stat label="Prospects" value={rows.length} />
-        <Stat label="Tier A" value={byTier.a} />
-        <Stat label="Tier B" value={byTier.b} />
-        <Stat label="Tier C" value={byTier.c} />
-        <Stat label="Untiered" value={byTier.untiered} />
-        <Stat label="Promoted" value={byStatus.promoted ?? 0} />
-      </div>
-      <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-ink-muted)]">
-        {PROSPECT_ROLES.filter((r) => byRole[r]).map((r) => (
-          <span key={r}>
-            {PROSPECT_ROLE_LABELS[r]}: {byRole[r]}
-          </span>
-        ))}
+      {/* One-line picture */}
+      <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-[var(--color-ink-soft)]">
         <span>
-          {PROSPECT_STATUS_LABELS.discovered}: {byStatus.discovered ?? 0} ·{" "}
-          {PROSPECT_STATUS_LABELS.qualified}: {byStatus.qualified ?? 0}
+          <span className="font-semibold text-[var(--color-ink)]">
+            {activeRows.length}
+          </span>{" "}
+          people
+        </span>
+        <span>
+          <span className="font-semibold text-[var(--color-ink)]">
+            {verifiedCount}
+          </span>{" "}
+          verified
+        </span>
+        <span>
+          <span className="font-semibold text-[var(--color-ink)]">
+            {inContactsCount}
+          </span>{" "}
+          in contacts
+        </span>
+        <span>
+          <span className="font-semibold text-[var(--color-ink)]">
+            {toReviewCount}
+          </span>{" "}
+          to review
         </span>
       </p>
 
-      {/* Discovery panel */}
-      <div className="mt-8 rounded-lg border border-[var(--color-rule)] bg-[var(--color-paper-soft)] p-5 dark:border-zinc-800 dark:bg-zinc-900/50">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink)]">
-          Discover
-        </h2>
-        <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-          Pick who to search for and where they should be based, then run a web
-          search. Anything left blank falls back to this database&rsquo;s brief.
-          Results land as &ldquo;unverified&rdquo; for you to review, enrich,
-          then promote. Origin and location fit show as signals on each row.
-        </p>
+      {/* Search machinery, collapsed by default */}
+      <details className="mt-6 rounded-lg border border-[var(--color-rule)] bg-[var(--color-paper-soft)] px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+        <summary className="cursor-pointer select-none text-sm font-medium text-[var(--color-ink)]">
+          Find more people (web search or paste)
+        </summary>
         <div className="mt-4">
           <DiscoverForm segmentId={seg.id} />
-        </div>
-        <div className="mt-5 border-t border-[var(--color-rule)] pt-4 dark:border-zinc-800">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-ink-muted)]">
-            Or paste your own seeds
-          </p>
-          <div className="mt-2">
-            <SeedForm segmentId={seg.id} />
+          <div className="mt-5 border-t border-[var(--color-rule)] pt-4 dark:border-zinc-800">
+            <p className="text-xs uppercase tracking-wide text-[var(--color-ink-muted)]">
+              Or paste your own seeds
+            </p>
+            <div className="mt-2">
+              <SeedForm segmentId={seg.id} />
+            </div>
           </div>
+          <SearchesPanel
+            runs={runCards}
+            segmentId={seg.id}
+            ungroupedCount={ungroupedCount}
+            activeRun={run}
+          />
         </div>
+      </details>
+
+      {/* All / Checked */}
+      <div className="mt-8 flex items-center gap-1 border-b border-[var(--color-rule)] dark:border-zinc-800">
+        <Tab
+          href={tabHref("")}
+          active={!checkedView}
+          label={`All (${activeRows.length})`}
+        />
+        <Tab
+          href={tabHref("checked")}
+          active={checkedView}
+          label={`Checked (${verifiedCount})`}
+        />
       </div>
 
-      {/* Search runs: each web search kept separate, with its findings + delete */}
-      <SearchesPanel
-        runs={runCards}
-        segmentId={seg.id}
-        ungroupedCount={ungroupedCount}
-        activeRun={run}
-      />
-
       {activeRunLabel && (
-        <p className="mt-6 flex items-center gap-2 text-sm text-[var(--color-ink-soft)]">
+        <p className="mt-4 flex items-center gap-2 text-sm text-[var(--color-ink-soft)]">
           Showing only{" "}
           <span className="font-medium text-[var(--color-ink)]">
             {activeRunLabel}
           </span>
           <Link
-            href={`/admin/research/${seg.id}`}
+            href={tabHref(view)}
             className="text-brand-600 hover:underline"
           >
             (clear)
@@ -245,8 +264,9 @@ export default async function SegmentPage({
         </p>
       )}
 
-      {/* Filters */}
-      <form className="mt-8 flex flex-wrap gap-3" method="get">
+      {/* Slim filter */}
+      <form className="mt-4 flex flex-wrap gap-3" method="get">
+        {view && <input type="hidden" name="view" value={view} />}
         <input
           name="q"
           defaultValue={q}
@@ -261,34 +281,20 @@ export default async function SegmentPage({
             </option>
           ))}
         </select>
-        <select name="tier" defaultValue={tier} className={selectCls}>
-          <option value="">All tiers</option>
-          {PROSPECT_TIERS.map((t) => (
-            <option key={t} value={t}>
-              {PROSPECT_TIER_LABELS[t]}
-            </option>
-          ))}
-        </select>
-        <select name="status" defaultValue={status} className={selectCls}>
-          <option value="">All statuses</option>
-          {PROSPECT_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {PROSPECT_STATUS_LABELS[s]}
-            </option>
-          ))}
-        </select>
         <button className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800">
           Filter
         </button>
       </form>
 
       {filtered.length === 0 ? (
-        <div className="mt-8 rounded-lg border border-[var(--color-rule)] bg-white px-4 py-16 text-center text-sm text-[var(--color-ink-muted)] dark:border-zinc-800 dark:bg-zinc-900">
-          {isFiltered ? (
+        <div className="mt-6 rounded-lg border border-[var(--color-rule)] bg-white px-4 py-16 text-center text-sm text-[var(--color-ink-muted)] dark:border-zinc-800 dark:bg-zinc-900">
+          {checkedView ? (
+            "No verified people yet. Verify people in the All tab to build this list."
+          ) : isFiltered ? (
             <>
               No matches.{" "}
               <Link
-                href={`/admin/research/${seg.id}`}
+                href={tabHref(view)}
                 className="text-brand-600 hover:underline"
               >
                 Clear filters
@@ -296,26 +302,28 @@ export default async function SegmentPage({
               .
             </>
           ) : (
-            "No prospects yet. Run discovery or add seeds above."
+            "No people yet. Use “Find more people” above."
           )}
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-lg border border-[var(--color-rule)] bg-white dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mt-6 rounded-lg border border-[var(--color-rule)] bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--color-rule)] text-left text-xs uppercase tracking-wide text-[var(--color-ink-muted)] dark:border-zinc-800">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Role / Company</th>
-                <th className="px-4 py-3">Tags</th>
                 <th className="px-4 py-3">Signals</th>
-                <th className="px-4 py-3">Tier</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Actions</th>
+                <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-rule)] dark:divide-zinc-800">
               {filtered.map((r) => (
-                <ProspectRow key={r.memberId} row={r} segmentId={seg.id} />
+                <ProspectRow
+                  key={r.memberId}
+                  row={r}
+                  segmentId={seg.id}
+                  view={checkedView ? "checked" : "all"}
+                />
               ))}
             </tbody>
           </table>
@@ -323,13 +331,8 @@ export default async function SegmentPage({
       )}
 
       <p className="mt-8 text-xs text-[var(--color-ink-muted)]">
-        Internal research only, never shown on the public site. Check the good
-        ones into your{" "}
-        <Link href="/admin/database" className="underline hover:text-brand-600">
-          Database
-        </Link>
-        , then add them to Contacts (tagged{" "}
-        <span className="font-mono">research:{seg.slug}</span>). Added contacts
+        Internal research only, never shown on the public site. Verify the real
+        targets, then add them to Contacts from the Checked tab. Added contacts
         stay off the pipeline until you engage.
       </p>
     </div>

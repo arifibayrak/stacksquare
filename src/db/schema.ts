@@ -911,9 +911,9 @@ export const PROSPECT_STATUS_LABELS: Record<
 > = {
   discovered: "Discovered",
   enriched: "Enriched",
-  // "qualified" is the reviewed/"Checked" stage: a person moved into the
-  // cross-list Database (/admin/database) for curation before Contacts.
-  qualified: "Checked",
+  // "qualified" is the reviewed/"Verified" stage: a person the team confirmed is
+  // a real target. Verified people are the list's curated subset (Checked view).
+  qualified: "Verified",
   promoted: "Promoted",
   dismissed: "Dismissed",
 };

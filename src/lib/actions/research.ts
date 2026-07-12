@@ -864,8 +864,8 @@ export async function dismissProspect(memberId: string) {
 }
 
 /**
- * Mark a Discover prospect as "Checked" (status `qualified`) so it enters the
- * cross-list Database, or un-check it back to enriched/discovered. Never
+ * Mark a Discover prospect as "Verified" (status `qualified`) so it joins the
+ * list's Checked view, or un-verify it back to enriched/discovered. Never
  * downgrades an already promoted or dismissed membership.
  */
 export async function setChecked(memberId: string, checked: boolean) {
@@ -887,43 +887,6 @@ export async function setChecked(memberId: string, checked: boolean) {
     .set({ status: next })
     .where(eq(segmentMembers.id, memberId));
   await revalidateMemberSegment(memberId);
-  revalidatePath("/admin/database");
-}
-
-/**
- * Remove a person from the Database (un-check across every list): revert all of
- * their `qualified` memberships to enriched/discovered. Promoted/dismissed
- * memberships are untouched.
- */
-export async function removeFromDatabase(prospectId: string) {
-  await requireUser();
-  const [p] = await db
-    .select({ enrichedAt: prospects.enrichedAt })
-    .from(prospects)
-    .where(eq(prospects.id, prospectId));
-  if (!p) return;
-  const restore = p.enrichedAt ? "enriched" : "discovered";
-
-  const mems = await db
-    .select({ segmentId: segmentMembers.segmentId })
-    .from(segmentMembers)
-    .where(
-      and(
-        eq(segmentMembers.prospectId, prospectId),
-        eq(segmentMembers.status, "qualified"),
-      ),
-    );
-  await db
-    .update(segmentMembers)
-    .set({ status: restore })
-    .where(
-      and(
-        eq(segmentMembers.prospectId, prospectId),
-        eq(segmentMembers.status, "qualified"),
-      ),
-    );
-  for (const m of mems) revalidatePath(`/admin/research/${m.segmentId}`);
-  revalidatePath("/admin/database");
 }
 
 /**
@@ -1151,7 +1114,6 @@ export async function promoteProspect(memberId: string) {
 
   revalidatePath(`/admin/research/${m.segmentId}`);
   revalidatePath(`/admin/research/${m.segmentId}/${memberId}`);
-  revalidatePath("/admin/database");
   revalidatePath("/admin/contacts");
   revalidatePath("/admin/pipeline");
   return { contactId, linked: Boolean(existing) };
