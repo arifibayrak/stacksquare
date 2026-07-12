@@ -74,6 +74,8 @@ export const aiRunKindEnum = pgEnum("ai_run_kind", [
   "summarize_transcript",
   "clip_suggestions",
   "find_contact_info",
+  "discover_prospects",
+  "enrich_prospect",
 ]);
 
 export const eventStatusEnum = pgEnum("event_status", [
@@ -115,6 +117,34 @@ export const captureStatusEnum = pgEnum("capture_status", [
   "pending",
   "promoted",
   "dismissed",
+]);
+
+// Research (targeted people-databases). A prospect's role describes the person
+// (multi-value, global); tier + lifecycle status are per-map judgments that
+// live on segment_members. signal_confidence is the shared high/medium/low
+// scale used for enrichment findings (mirrors the enum inline in enrich.ts).
+export const prospectRoleEnum = pgEnum("prospect_role", [
+  "founder",
+  "operator",
+  "investor",
+  "ecosystem",
+  "organizer",
+]);
+
+export const prospectTierEnum = pgEnum("prospect_tier", ["a", "b", "c"]);
+
+export const prospectStatusEnum = pgEnum("prospect_status", [
+  "discovered",
+  "enriched",
+  "qualified",
+  "promoted",
+  "dismissed",
+]);
+
+export const signalConfidenceEnum = pgEnum("signal_confidence", [
+  "high",
+  "medium",
+  "low",
 ]);
 
 export const contacts = pgTable(
@@ -326,6 +356,137 @@ export const captures = pgTable(
   ],
 );
 
+// A targeted people-database ("Segment"), e.g. "Turkish founders in London".
+// Internal entity name is `segment`; the admin section is labelled "Research".
+// A market map / intelligence asset. Never rendered on the public site.
+export const segments = pgTable(
+  "segments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    // Stamped onto promoted contacts as source, e.g. "turkish-founders-london".
+    slug: text("slug").notNull(),
+    description: text("description"),
+    // Free-text discovery brief handed to the web_search agent.
+    brief: text("brief"),
+    archived: boolean("archived").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [uniqueIndex("segments_slug_idx").on(t.slug)],
+);
+
+// Discovered / scraped people. One row per person, shared across segments via
+// segment_members. A prospect enters `contacts` only on explicit promotion.
+// Unlike `contacts`, prospects carry a UNIQUE linkedin_url so a person is
+// stored (and enriched) once. Public professional data only, plus a business
+// email when publicly published (see docs/adr/0002).
+export const prospects = pgTable(
+  "prospects",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    title: text("title"),
+    company: text("company"),
+    city: text("city"),
+    linkedinUrl: text("linkedin_url"),
+    links: text("links").array().default([]).notNull(),
+    email: text("email"),
+    emailConfidence: signalConfidenceEnum("email_confidence"),
+    // Describes the person (global), multi-value.
+    roles: prospectRoleEnum("roles").array().default([]).notNull(),
+    bio: text("bio"),
+    // "seed" | "web_search" — how the person entered the map.
+    discoveredVia: text("discovered_via"),
+    sourceUrl: text("source_url"),
+    // Area-agnostic qualifiers: how strongly the person matches the search's
+    // target origin/heritage and target location (set per discovery run).
+    originSignal: signalConfidenceEnum("origin_signal"),
+    locationSignal: signalConfidenceEnum("location_signal"),
+    // Objective global fact: set once web_search enrichment has run.
+    enrichedAt: timestamp("enriched_at", { withTimezone: true }),
+    // Promotion bridge (global): set once the person becomes a contact.
+    contactId: uuid("contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    promotedAt: timestamp("promoted_at", { withTimezone: true }),
+    // Provenance / lawful-basis / do-not-contact notes.
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    // Postgres treats NULLs as distinct, so URL-less prospects can coexist;
+    // dedupe for those falls back to name + company in the server action.
+    uniqueIndex("prospects_linkedin_url_idx").on(t.linkedinUrl),
+    index("prospects_contact_idx").on(t.contactId),
+  ],
+);
+
+// Many-to-many membership. tier + lifecycle status are per-map judgments and
+// live here (mirrors event_targets); the person's identity stays on prospects.
+export const segmentMembers = pgTable(
+  "segment_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    segmentId: uuid("segment_id")
+      .notNull()
+      .references(() => segments.id, { onDelete: "cascade" }),
+    prospectId: uuid("prospect_id")
+      .notNull()
+      .references(() => prospects.id, { onDelete: "cascade" }),
+    tier: prospectTierEnum("tier"),
+    status: prospectStatusEnum("status").default("discovered").notNull(),
+    fitScore: integer("fit_score"),
+    note: text("note"),
+    addedAt: timestamp("added_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("segment_members_segment_prospect_idx").on(
+      t.segmentId,
+      t.prospectId,
+    ),
+    index("segment_members_segment_idx").on(t.segmentId),
+    index("segment_members_status_idx").on(t.status),
+  ],
+);
+
+export const segmentsRelations = relations(segments, ({ many }) => ({
+  members: many(segmentMembers),
+}));
+
+export const prospectsRelations = relations(prospects, ({ one, many }) => ({
+  contact: one(contacts, {
+    fields: [prospects.contactId],
+    references: [contacts.id],
+  }),
+  memberships: many(segmentMembers),
+}));
+
+export const segmentMembersRelations = relations(segmentMembers, ({ one }) => ({
+  segment: one(segments, {
+    fields: [segmentMembers.segmentId],
+    references: [segments.id],
+  }),
+  prospect: one(prospects, {
+    fields: [segmentMembers.prospectId],
+    references: [prospects.id],
+  }),
+}));
+
 // Internal venue address book. Never rendered on the public site; the
 // public-facing place string stays in events.location.
 export const venues = pgTable("venues", {
@@ -528,6 +689,11 @@ export type EventCost = typeof eventCosts.$inferSelect;
 export type EventSpeaker = typeof eventSpeakers.$inferSelect;
 export type EventTarget = typeof eventTargets.$inferSelect;
 export type EventTask = typeof eventTasks.$inferSelect;
+export type Segment = typeof segments.$inferSelect;
+export type NewSegment = typeof segments.$inferInsert;
+export type Prospect = typeof prospects.$inferSelect;
+export type NewProspect = typeof prospects.$inferInsert;
+export type SegmentMember = typeof segmentMembers.$inferSelect;
 
 export const STAGES = [
   "identified",
@@ -650,6 +816,66 @@ export const OWNER_LABELS: Record<(typeof OWNERS)[number], string> = {
   arif: "Arif",
   kerem: "Kerem",
   both: "Both",
+};
+
+export const PROSPECT_ROLES = [
+  "founder",
+  "operator",
+  "investor",
+  "ecosystem",
+  "organizer",
+] as const;
+
+export const PROSPECT_ROLE_LABELS: Record<
+  (typeof PROSPECT_ROLES)[number],
+  string
+> = {
+  founder: "Founder",
+  operator: "Operator",
+  investor: "Investor",
+  ecosystem: "Ecosystem",
+  organizer: "Organizer",
+};
+
+export const PROSPECT_TIERS = ["a", "b", "c"] as const;
+
+export const PROSPECT_TIER_LABELS: Record<
+  (typeof PROSPECT_TIERS)[number],
+  string
+> = {
+  a: "Tier A",
+  b: "Tier B",
+  c: "Tier C",
+};
+
+export const PROSPECT_STATUSES = [
+  "discovered",
+  "enriched",
+  "qualified",
+  "promoted",
+  "dismissed",
+] as const;
+
+export const PROSPECT_STATUS_LABELS: Record<
+  (typeof PROSPECT_STATUSES)[number],
+  string
+> = {
+  discovered: "Discovered",
+  enriched: "Enriched",
+  qualified: "Qualified",
+  promoted: "Promoted",
+  dismissed: "Dismissed",
+};
+
+export const SIGNAL_CONFIDENCES = ["high", "medium", "low"] as const;
+
+export const SIGNAL_CONFIDENCE_LABELS: Record<
+  (typeof SIGNAL_CONFIDENCES)[number],
+  string
+> = {
+  high: "High",
+  medium: "Medium",
+  low: "Low",
 };
 
 // app_settings key for the public Luma calendar source.
