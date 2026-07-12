@@ -12,9 +12,11 @@ import {
   segments,
   prospects,
   segmentMembers,
+  discoveryRuns,
   contacts,
   aiRuns,
   PROSPECT_ROLES,
+  PROSPECT_ROLE_LABELS,
   PROSPECT_TIERS,
   PROSPECT_STATUSES,
   SIGNAL_CONFIDENCES,
@@ -321,6 +323,36 @@ const DiscoverParams = z.object({
 });
 export type DiscoverParamsInput = z.input<typeof DiscoverParams>;
 
+type DiscoverP = z.infer<typeof DiscoverParams>;
+
+// Human label for a run, built from its params, e.g. "Founder, CTO in London
+// (Turkish)". Falls back to a broad label when nothing narrowing is set.
+function discoveryLabel(p: DiscoverP): string {
+  const who =
+    p.roles?.map((r) => PROSPECT_ROLE_LABELS[r]).join(", ") ||
+    p.keywords ||
+    "People";
+  const parts = [who];
+  if (p.location) parts.push(`in ${p.location}`);
+  if (p.origin) parts.push(`(${p.origin})`);
+  return parts.join(" ").trim() || "Broad search";
+}
+
+// Count candidates by a signal field for the qualitative post-search summary.
+function signalBreakdown(
+  items: { originSignal: string | null; locationSignal: string | null }[],
+) {
+  const tally = (key: "originSignal" | "locationSignal") => {
+    const out = { high: 0, medium: 0, low: 0 };
+    for (const it of items) {
+      const v = it[key];
+      if (v === "high" || v === "medium" || v === "low") out[v]++;
+    }
+    return out;
+  };
+  return { byOrigin: tally("originSignal"), byLocation: tally("locationSignal") };
+}
+
 // Phase 1: web research (tools, free-form text). Phase 2 extracts structure.
 // Anthropic's server-side web_search tool and forced structured output do not
 // mix reliably in a single call ("No object generated"), so we split them.
@@ -386,6 +418,22 @@ export async function discoverProspects(
   let tokensOut = 0;
   let webSearches = 0;
 
+  // Number this search within the segment ("Search #N") and label it. Kept as a
+  // first-class run so many searches stay separable and reviewable.
+  const priorRuns = await db
+    .select({ id: discoveryRuns.id })
+    .from(discoveryRuns)
+    .where(eq(discoveryRuns.segmentId, segmentId));
+  const seq = priorRuns.length + 1;
+  const label = discoveryLabel(p);
+  const paramsJson = {
+    location: p.location ?? null,
+    origin: p.origin ?? null,
+    roles: p.roles ?? [],
+    keywords: p.keywords ?? null,
+    count,
+  };
+
   // Phase 1: research the open web, free-form.
   let notes = "";
   try {
@@ -406,12 +454,22 @@ export async function discoverProspects(
     if (!notes) throw new Error("web search returned no usable text");
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown";
+    await db.insert(discoveryRuns).values({
+      segmentId,
+      seq,
+      label,
+      params: paramsJson,
+      status: "error",
+      errorMessage: `Search failed: ${message}`,
+      model,
+    });
     await db.insert(aiRuns).values({
       kind: "discover_prospects",
       input: { segmentId, brief: promptBrief, phase: "research" },
       model,
       errorMessage: message,
     });
+    revalidatePath(`/admin/research/${segmentId}`);
     throw new Error(`Discovery search failed: ${message}`);
   }
 
@@ -430,12 +488,23 @@ export async function discoverProspects(
     tokensOut += u.outputTokens;
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown";
+    await db.insert(discoveryRuns).values({
+      segmentId,
+      seq,
+      label,
+      params: paramsJson,
+      notes,
+      status: "error",
+      errorMessage: `Parse failed: ${message}`,
+      model,
+    });
     await db.insert(aiRuns).values({
       kind: "discover_prospects",
       input: { segmentId, brief: promptBrief, phase: "extract", notes },
       model,
       errorMessage: message,
     });
+    revalidatePath(`/admin/research/${segmentId}`);
     throw new Error(`Discovery parse failed: ${message}`);
   }
 
@@ -454,6 +523,20 @@ export async function discoverProspects(
         c.locationSignal === "medium"),
   );
   const dropped = candidates.length - usable.length;
+
+  // Record the run up front so each member can be stamped with it.
+  const [run] = await db
+    .insert(discoveryRuns)
+    .values({
+      segmentId,
+      seq,
+      label,
+      params: paramsJson,
+      notes,
+      status: "ok",
+      model,
+    })
+    .returning({ id: discoveryRuns.id });
 
   let added = 0;
   let linked = 0;
@@ -512,6 +595,7 @@ export async function discoverProspects(
       .values({
         segmentId,
         prospectId,
+        discoveryRunId: run.id,
         status: "discovered",
         tier: cand.suggestedTier,
       })
@@ -522,9 +606,23 @@ export async function discoverProspects(
     if (res.length) linked++;
   }
 
+  const breakdown = signalBreakdown(usable);
+  const summary = {
+    found: usable.length,
+    added,
+    linked,
+    dropped,
+    webSearches,
+    ...breakdown,
+  };
+  await db
+    .update(discoveryRuns)
+    .set({ summary })
+    .where(eq(discoveryRuns.id, run.id));
+
   await db.insert(aiRuns).values({
     kind: "discover_prospects",
-    input: { segmentId, brief: promptBrief },
+    input: { segmentId, brief: promptBrief, discoveryRunId: run.id },
     output: {
       count: candidates.length,
       usable: usable.length,
@@ -539,7 +637,16 @@ export async function discoverProspects(
   });
 
   revalidatePath(`/admin/research/${segmentId}`);
-  return { found: usable.length, dropped, added, linked };
+  return {
+    runId: run.id,
+    seq,
+    label,
+    found: usable.length,
+    dropped,
+    added,
+    linked,
+    ...breakdown,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -787,6 +894,77 @@ export async function dismissProspectGlobal(prospectId: string, reason?: string)
     .set({ status: "dismissed" })
     .where(eq(segmentMembers.prospectId, prospectId));
   for (const m of mems) revalidatePath(`/admin/research/${m.segmentId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Hard delete — remove people / whole searches (distinct from soft "dismiss")
+// ---------------------------------------------------------------------------
+
+/**
+ * Hard-delete one membership. Removes the person from this segment; if the
+ * prospect is now orphaned (in no other segment) and was never promoted to a
+ * contact, delete the prospect row too so it does not linger globally.
+ */
+export async function deleteMember(memberId: string) {
+  await requireUser();
+  const [m] = await db
+    .select()
+    .from(segmentMembers)
+    .where(eq(segmentMembers.id, memberId));
+  if (!m) return;
+
+  await db.delete(segmentMembers).where(eq(segmentMembers.id, memberId));
+  await maybeDeleteOrphanProspect(m.prospectId);
+  revalidatePath(`/admin/research/${m.segmentId}`);
+}
+
+/** Delete a prospect only if nothing else references it and it is not promoted. */
+async function maybeDeleteOrphanProspect(prospectId: string) {
+  const others = await db
+    .select({ id: segmentMembers.id })
+    .from(segmentMembers)
+    .where(eq(segmentMembers.prospectId, prospectId));
+  if (others.length > 0) return;
+  const [p] = await db
+    .select({ promotedAt: prospects.promotedAt, contactId: prospects.contactId })
+    .from(prospects)
+    .where(eq(prospects.id, prospectId));
+  if (p && !p.promotedAt && !p.contactId) {
+    await db.delete(prospects).where(eq(prospects.id, prospectId));
+  }
+}
+
+/**
+ * Delete a whole discovery run. Surviving members keep their people but lose the
+ * run tag (FK set null). When alsoDeleteProspects is true, also remove the
+ * not-yet-promoted people this run surfaced (and orphaned prospects), so a bad
+ * or noisy search can be wiped in one action.
+ */
+export async function deleteDiscoveryRun(
+  runId: string,
+  alsoDeleteProspects = false,
+) {
+  await requireUser();
+  const [run] = await db
+    .select()
+    .from(discoveryRuns)
+    .where(eq(discoveryRuns.id, runId));
+  if (!run) return;
+
+  if (alsoDeleteProspects) {
+    const mems = await db
+      .select()
+      .from(segmentMembers)
+      .where(eq(segmentMembers.discoveryRunId, runId));
+    for (const m of mems) {
+      if (m.status === "promoted") continue; // never delete promoted people
+      await db.delete(segmentMembers).where(eq(segmentMembers.id, m.id));
+      await maybeDeleteOrphanProspect(m.prospectId);
+    }
+  }
+
+  await db.delete(discoveryRuns).where(eq(discoveryRuns.id, runId));
+  revalidatePath(`/admin/research/${run.segmentId}`);
 }
 
 // ---------------------------------------------------------------------------

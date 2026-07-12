@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import {
   db,
   segments,
   segmentMembers,
+  discoveryRuns,
   prospects,
   PROSPECT_ROLES,
   PROSPECT_ROLE_LABELS,
@@ -13,7 +14,14 @@ import {
   PROSPECT_STATUSES,
   PROSPECT_STATUS_LABELS,
 } from "@/db";
-import { SeedForm, DiscoverForm, ProspectRow, type Row } from "./client";
+import {
+  SeedForm,
+  DiscoverForm,
+  ProspectRow,
+  SearchesPanel,
+  type Row,
+  type RunCard,
+} from "./client";
 
 export const dynamic = "force-dynamic";
 
@@ -43,19 +51,34 @@ export default async function SegmentPage({
     tier?: string;
     status?: string;
     role?: string;
+    run?: string;
   }>;
 }) {
   const { id } = await params;
-  const { q = "", tier = "", status = "", role = "" } = await searchParams;
+  const {
+    q = "",
+    tier = "",
+    status = "",
+    role = "",
+    run = "",
+  } = await searchParams;
 
   const [seg] = await db.select().from(segments).where(eq(segments.id, id));
   if (!seg) notFound();
+
+  const runs = await db
+    .select()
+    .from(discoveryRuns)
+    .where(eq(discoveryRuns.segmentId, id))
+    .orderBy(desc(discoveryRuns.seq));
+  const runSeqById = new Map(runs.map((r) => [r.id, r.seq]));
 
   const members = await db
     .select({
       memberId: segmentMembers.id,
       tier: segmentMembers.tier,
       status: segmentMembers.status,
+      runId: segmentMembers.discoveryRunId,
       p: prospects,
     })
     .from(segmentMembers)
@@ -80,6 +103,29 @@ export default async function SegmentPage({
     email: m.p.email,
     enriched: m.p.enrichedAt != null,
     contactId: m.p.contactId,
+    runId: m.runId,
+    runSeq: m.runId ? (runSeqById.get(m.runId) ?? null) : null,
+  }));
+
+  // Live count of current members per run (for the run cards), and how many are
+  // ungrouped (added before search tracking, or seeded manually).
+  const liveByRun = new Map<string, number>();
+  let ungroupedCount = 0;
+  for (const r of rows) {
+    if (r.runId) liveByRun.set(r.runId, (liveByRun.get(r.runId) ?? 0) + 1);
+    else ungroupedCount++;
+  }
+  const runCards: RunCard[] = runs.map((r) => ({
+    id: r.id,
+    seq: r.seq,
+    label: r.label,
+    status: r.status,
+    errorMessage: r.errorMessage,
+    createdAt: r.createdAt.toISOString(),
+    params: (r.params ?? null) as RunCard["params"],
+    summary: (r.summary ?? null) as RunCard["summary"],
+    notes: r.notes,
+    liveCount: liveByRun.get(r.id) ?? 0,
   }));
 
   const byTier: Record<string, number> = { a: 0, b: 0, c: 0, untiered: 0 };
@@ -93,6 +139,8 @@ export default async function SegmentPage({
   }
 
   const filtered = rows.filter((r) => {
+    if (run === "none" && r.runId) return false;
+    if (run && run !== "none" && r.runId !== run) return false;
     if (tier && r.tier !== tier) return false;
     if (status && r.status !== status) return false;
     if (role && !r.roles.includes(role)) return false;
@@ -103,7 +151,13 @@ export default async function SegmentPage({
     return true;
   });
 
-  const isFiltered = Boolean(q || tier || status || role);
+  const isFiltered = Boolean(q || tier || status || role || run);
+  const activeRunLabel =
+    run === "none"
+      ? "Ungrouped"
+      : run
+        ? `Search #${runSeqById.get(run) ?? "?"}`
+        : "";
 
   return (
     <div className="px-8 py-10">
@@ -166,6 +220,29 @@ export default async function SegmentPage({
           </div>
         </div>
       </div>
+
+      {/* Search runs: each web search kept separate, with its findings + delete */}
+      <SearchesPanel
+        runs={runCards}
+        segmentId={seg.id}
+        ungroupedCount={ungroupedCount}
+        activeRun={run}
+      />
+
+      {activeRunLabel && (
+        <p className="mt-6 flex items-center gap-2 text-sm text-[var(--color-ink-soft)]">
+          Showing only{" "}
+          <span className="font-medium text-[var(--color-ink)]">
+            {activeRunLabel}
+          </span>
+          <Link
+            href={`/admin/research/${seg.id}`}
+            className="text-brand-600 hover:underline"
+          >
+            (clear)
+          </Link>
+        </p>
+      )}
 
       {/* Filters */}
       <form className="mt-8 flex flex-wrap gap-3" method="get">

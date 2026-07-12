@@ -51,6 +51,16 @@ companies / LinkedIn URLs) and the **web-search agent** (finds people from
 public sources and lands them as unverified for review). No automated LinkedIn
 scraping. See [ADR 0002](docs/adr/0002-no-automated-linkedin-scraper.md).
 
+## Discovery run (Search)
+
+One web-search discovery over a Segment, kept as a first-class record so many
+searches stay separable. Numbered per Segment ("Search #1, #2, ..."), labelled
+from its params, and it stores the qualitative research findings plus a signal
+breakdown. Every Prospect it surfaces is stamped with its `discovery_run_id`, so
+the segment page can show, filter by, and delete an individual search and its
+people. Modelled by the `discovery_runs` table. Seeded / pre-tracking members
+are **Ungrouped**.
+
 ## Promotion
 
 Graduating a Prospect into the warm `contacts` pipeline. The **only** path a
