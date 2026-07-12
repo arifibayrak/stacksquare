@@ -175,9 +175,7 @@ export function ProspectDetailClient({ p }: { p: ProspectDetail }) {
                     const checked = p.status === "qualified";
                     try {
                       await setChecked(p.memberId, !checked);
-                      toast.success(
-                        checked ? "Removed from Database" : "Checked into Database",
-                      );
+                      toast.success(checked ? "Un-verified" : "Verified");
                     } catch (e) {
                       toast.error("Failed", { description: msg(e) });
                     }
@@ -190,7 +188,7 @@ export function ProspectDetailClient({ p }: { p: ProspectDetail }) {
                     : "border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800")
                 }
               >
-                {p.status === "qualified" ? "✓ Checked" : "Check into Database"}
+                {p.status === "qualified" ? "✓ Verified" : "Verify"}
               </button>
               <button
                 type="button"

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { QuickPill } from "@/components/admin/quick-pill";
 import {
   addSeedProspects,
   discoverProspects,
@@ -12,18 +11,9 @@ import {
   dismissProspect,
   deleteMember,
   deleteDiscoveryRun,
-  setProspectTier,
-  setSegmentMemberStatus,
   setChecked,
 } from "@/lib/actions/research";
-import {
-  PROSPECT_ROLES,
-  PROSPECT_ROLE_LABELS,
-  PROSPECT_TIERS,
-  PROSPECT_TIER_LABELS,
-  PROSPECT_STATUSES,
-  PROSPECT_STATUS_LABELS,
-} from "@/db/schema";
+import { PROSPECT_ROLES, PROSPECT_ROLE_LABELS } from "@/db/schema";
 import { formatDate } from "@/lib/utils";
 
 type Role = (typeof PROSPECT_ROLES)[number];
@@ -78,15 +68,6 @@ export type RunCard = {
 
 const inputCls =
   "block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-zinc-700 dark:bg-zinc-900";
-
-const TIER_OPTIONS = [
-  { value: "", label: "·" },
-  ...PROSPECT_TIERS.map((t) => ({ value: t, label: PROSPECT_TIER_LABELS[t] })),
-];
-const STATUS_OPTIONS = PROSPECT_STATUSES.map((s) => ({
-  value: s,
-  label: PROSPECT_STATUS_LABELS[s],
-}));
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : "Unknown error");
 
@@ -513,37 +494,58 @@ function Signal({ label, value }: { label: string; value: string | null }) {
 export function ProspectRow({
   row,
   segmentId,
+  view,
 }: {
   row: Row;
   segmentId: string;
+  view: "all" | "checked";
 }) {
   const [pending, start] = useTransition();
   const [dismissed, setDismissed] = useState(row.status === "dismissed");
   const [deleted, setDeleted] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const detailHref = `/admin/research/${segmentId}/${row.memberId}`;
+  const checked = row.status === "qualified";
 
-  if (deleted) return null;
+  if (deleted || dismissed) return null;
+
+  const run = (fn: () => Promise<unknown>, ok: string, fail: string) =>
+    start(async () => {
+      try {
+        await fn();
+        if (ok) toast.success(ok);
+      } catch (e) {
+        toast.error(fail, { description: msg(e) });
+      }
+    });
+
+  const dotClass = checked
+    ? "bg-emerald-500"
+    : row.status === "discovered"
+      ? "bg-amber-400"
+      : "bg-zinc-300";
+  const dotTitle = checked
+    ? "Verified"
+    : row.status === "discovered"
+      ? "Not reviewed"
+      : "Enriched";
 
   return (
-    <tr
-      className={
-        "hover:bg-zinc-50 dark:hover:bg-zinc-800/50 " +
-        (dismissed ? "opacity-50" : "")
-      }
-    >
+    <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
       <td className="px-4 py-3">
+        <span
+          className={
+            "mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle " + dotClass
+          }
+          title={dotTitle}
+        />
         <Link
           href={detailHref}
           className="font-medium text-[var(--color-ink)] hover:text-brand-600"
         >
           {row.name}
         </Link>
-        {row.status === "discovered" && (
-          <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-amber-700 dark:bg-amber-950 dark:text-amber-400">
-            unverified
-          </span>
-        )}
         {row.city && (
           <span className="ml-2 text-xs text-[var(--color-ink-muted)]">
             {row.city}
@@ -560,20 +562,20 @@ export function ProspectRow({
         )}
       </td>
       <td className="px-4 py-3 text-[var(--color-ink-soft)]">
-        {row.title}
-        {row.company ? ` · ${row.company}` : ""}
-      </td>
-      <td className="px-4 py-3">
-        <span className="flex flex-wrap gap-1">
-          {row.roles.map((r) => (
-            <span
-              key={r}
-              className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] dark:bg-zinc-800"
-            >
-              {PROSPECT_ROLE_LABELS[r as keyof typeof PROSPECT_ROLE_LABELS] ?? r}
-            </span>
-          ))}
-        </span>
+        {[row.title, row.company].filter(Boolean).join(" · ")}
+        {row.roles.length > 0 && (
+          <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+            {row.roles.map((r) => (
+              <span
+                key={r}
+                className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] dark:bg-zinc-800"
+              >
+                {PROSPECT_ROLE_LABELS[r as keyof typeof PROSPECT_ROLE_LABELS] ??
+                  r}
+              </span>
+            ))}
+          </span>
+        )}
       </td>
       <td className="px-4 py-3">
         <span className="flex flex-col gap-0.5">
@@ -582,23 +584,7 @@ export function ProspectRow({
         </span>
       </td>
       <td className="px-4 py-3">
-        <QuickPill
-          label="Tier"
-          current={row.tier ?? ""}
-          options={TIER_OPTIONS}
-          onChange={(next) => setProspectTier(row.memberId, next)}
-        />
-      </td>
-      <td className="px-4 py-3">
-        <QuickPill
-          label="Status"
-          current={row.status}
-          options={STATUS_OPTIONS}
-          onChange={(next) => setSegmentMemberStatus(row.memberId, next)}
-        />
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           {row.promoted ? (
             <Link
               href={`/admin/contacts/${row.contactId}`}
@@ -608,137 +594,140 @@ export function ProspectRow({
             </Link>
           ) : (
             <>
-              {(() => {
-                const checked = row.status === "qualified";
-                return (
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() =>
-                      start(async () => {
-                        try {
-                          await setChecked(row.memberId, !checked);
-                          toast.success(
-                            checked
-                              ? `Removed ${row.name} from Database`
-                              : `${row.name} checked into Database`,
-                          );
-                        } catch (e) {
-                          toast.error("Failed", { description: msg(e) });
-                        }
-                      })
-                    }
-                    className={
-                      "rounded-md border px-2.5 py-1 text-xs disabled:opacity-50 " +
-                      (checked
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                        : "border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800")
-                    }
-                    title={
-                      checked
-                        ? "In your Database. Click to remove."
-                        : "Check into your Database"
-                    }
-                  >
-                    {checked ? "✓ Checked" : "Check"}
-                  </button>
-                );
-              })()}
               <button
                 type="button"
                 disabled={pending}
                 onClick={() =>
-                  start(async () => {
-                    try {
-                      await enrichProspect(row.prospectId);
-                      toast.success(`Enriched ${row.name}`);
-                    } catch (e) {
-                      toast.error("Enrich failed", { description: msg(e) });
-                    }
-                  })
+                  run(
+                    () => setChecked(row.memberId, !checked),
+                    checked ? `Unverified ${row.name}` : `Verified ${row.name}`,
+                    "Failed",
+                  )
                 }
-                className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-              >
-                {pending ? "…" : row.enriched ? "Re-enrich" : "Enrich"}
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() =>
-                  start(async () => {
-                    try {
-                      await promoteProspect(row.memberId);
-                      toast.success(`${row.name} added to contacts`);
-                    } catch (e) {
-                      toast.error("Promote failed", { description: msg(e) });
-                    }
-                  })
+                className={
+                  "rounded-md border px-2.5 py-1 text-xs disabled:opacity-50 " +
+                  (checked
+                    ? "border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                    : "border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800")
                 }
-                className="rounded-md bg-[var(--color-ink)] px-2.5 py-1 text-xs font-medium text-[var(--color-paper)] hover:opacity-80 disabled:opacity-50"
-                title="Add straight to Contacts (kept off the pipeline until you engage)"
+                title={checked ? "Verified. Click to un-verify." : "Mark verified"}
               >
-                Promote
+                {checked ? "✓ Verified" : "Verify"}
               </button>
-            </>
-          )}
-          {!dismissed && row.status !== "promoted" && (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                start(async () => {
-                  try {
-                    await dismissProspect(row.memberId);
-                    setDismissed(true);
-                  } catch (e) {
-                    toast.error("Dismiss failed", { description: msg(e) });
-                  }
-                })
-              }
-              className="text-xs text-zinc-400 hover:text-zinc-600"
-              title="Soft-hide: keeps the row, marks it dismissed"
-            >
-              Dismiss
-            </button>
-          )}
-          {row.status !== "promoted" &&
-            (confirmDel ? (
-              <span className="flex items-center gap-1.5 text-xs">
+              {view === "checked" && (
                 <button
                   type="button"
                   disabled={pending}
                   onClick={() =>
-                    start(async () => {
-                      try {
-                        await deleteMember(row.memberId);
-                        setDeleted(true);
-                      } catch (e) {
-                        toast.error("Delete failed", { description: msg(e) });
-                      }
-                    })
+                    run(
+                      () => promoteProspect(row.memberId),
+                      `${row.name} added to contacts`,
+                      "Add to contacts failed",
+                    )
                   }
-                  className="rounded bg-red-600 px-2 py-0.5 font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                  className="rounded-md bg-[var(--color-ink)] px-2.5 py-1 text-xs font-medium text-[var(--color-paper)] hover:opacity-80 disabled:opacity-50"
+                  title="Create/link a contact (kept off the pipeline until you engage)"
                 >
-                  Delete
+                  Add to Contacts
                 </button>
+              )}
+              <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setConfirmDel(false)}
-                  className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                  onClick={() => setMenuOpen((o) => !o)}
+                  className="rounded-md px-2 py-1 text-sm leading-none text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+                  aria-label="More actions"
                 >
-                  cancel
+                  ⋯
                 </button>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmDel(true)}
-                className="text-xs text-zinc-400 hover:text-red-600"
-                title="Hard delete: removes the person from this list"
-              >
-                Delete
-              </button>
-            ))}
+                {menuOpen && (
+                  <>
+                    <button
+                      type="button"
+                      aria-hidden
+                      tabIndex={-1}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setConfirmDel(false);
+                      }}
+                      className="fixed inset-0 z-10 cursor-default"
+                    />
+                    <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-md border border-[var(--color-rule)] bg-white py-1 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          run(
+                            () => enrichProspect(row.prospectId),
+                            `Enriched ${row.name}`,
+                            "Enrich failed",
+                          );
+                        }}
+                        className="block w-full px-3 py-1.5 text-left hover:bg-zinc-50 disabled:opacity-50 dark:hover:bg-zinc-800"
+                      >
+                        {row.enriched ? "Re-enrich (web)" : "Enrich (web)"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          run(
+                            () =>
+                              dismissProspect(row.memberId).then(() =>
+                                setDismissed(true),
+                              ),
+                            `Dismissed ${row.name}`,
+                            "Dismiss failed",
+                          );
+                        }}
+                        className="block w-full px-3 py-1.5 text-left hover:bg-zinc-50 disabled:opacity-50 dark:hover:bg-zinc-800"
+                      >
+                        Dismiss
+                      </button>
+                      {confirmDel ? (
+                        <div className="flex items-center gap-2 px-3 py-1.5">
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() =>
+                              run(
+                                () =>
+                                  deleteMember(row.memberId).then(() =>
+                                    setDeleted(true),
+                                  ),
+                                `Deleted ${row.name}`,
+                                "Delete failed",
+                              )
+                            }
+                            className="rounded bg-red-600 px-2 py-0.5 font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDel(false)}
+                            className="text-[var(--color-ink-muted)]"
+                          >
+                            cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDel(true)}
+                          className="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </td>
     </tr>
