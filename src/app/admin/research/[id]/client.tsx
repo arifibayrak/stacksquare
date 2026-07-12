@@ -101,7 +101,9 @@ export function DiscoverButton({ segmentId }: { segmentId: string }) {
           try {
             const r = await discoverProspects(segmentId);
             toast.success(
-              `Discovery: ${r.found} found · ${r.added} new · ${r.linked} added`,
+              `Discovery: ${r.linked} added · ${r.added} new${
+                r.dropped ? ` · ${r.dropped} filtered (weak London / no source)` : ""
+              }`,
             );
           } catch (e) {
             toast.error("Discovery failed", { description: msg(e) });

@@ -312,8 +312,11 @@ const DISCOVER_EXTRACT_SYSTEM =
   "real person the notes describe. Only include a person if the notes give a " +
   "public source URL for them. Use null for any field the notes do not support; " +
   "never invent data (especially emails). turkishSignal / londonSignal reflect " +
-  "how strong the notes' evidence is. suggestedTier: a = clear high-signal " +
-  "founder actively building in London, b = solid fit, c = adjacent / ecosystem.";
+  "how strong the notes' evidence is. Set londonSignal to high or medium ONLY " +
+  "when the notes place the person currently living or working in London; if " +
+  "they are based elsewhere or London is unclear, set it to low. suggestedTier: " +
+  "a = clear high-signal founder actively building in London, b = solid fit, " +
+  "c = adjacent / ecosystem.";
 
 export async function discoverProspects(
   segmentId: string,
@@ -383,8 +386,15 @@ export async function discoverProspects(
     throw new Error(`Discovery parse failed: ${message}`);
   }
 
-  // Precision gate: keep only people with a name and a public source URL.
-  const usable = candidates.filter((c) => c.name && c.sourceUrl);
+  // Precision gate: require a name, a public source URL, and a medium+ London
+  // signal. Hard-drops anyone we cannot place in London (including unknown
+  // signal), so the map stays "in London", not "Turkish founders anywhere".
+  const usable = candidates.filter(
+    (c) =>
+      c.name &&
+      c.sourceUrl &&
+      (c.londonSignal === "high" || c.londonSignal === "medium"),
+  );
   const dropped = candidates.length - usable.length;
 
   let added = 0;
