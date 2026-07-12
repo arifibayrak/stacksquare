@@ -5,6 +5,11 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { db, submissions, contacts } from "@/db";
+import {
+  canonicalLinkedin,
+  normalizeEmail,
+  findContactByIdentity,
+} from "@/lib/contacts-dedup";
 
 async function requireUser() {
   const { userId } = await auth();
@@ -29,22 +34,44 @@ export async function convertToContact(opts: {
   notes: string;
 }) {
   await requireUser();
-  const [c] = await db
-    .insert(contacts)
-    .values({
-      name: opts.name,
-      email: opts.email,
-      linkedinUrl: opts.linkedinUrl,
-      source: opts.source,
-      notes: opts.notes,
-      stage: "identified",
-      priority: "p2",
-    })
-    .returning();
+  const email = normalizeEmail(opts.email);
+  const linkedinUrl = canonicalLinkedin(opts.linkedinUrl);
+
+  // Dedupe: link the submission to the existing contact (filling its blank
+  // identity keys) rather than creating a second row for the same person.
+  const existing = await findContactByIdentity({ linkedinUrl, email });
+  let contactId: string;
+  if (existing) {
+    await db
+      .update(contacts)
+      .set({
+        email: existing.email ?? email,
+        linkedinUrl: existing.linkedinUrl ?? linkedinUrl,
+        source: existing.source ?? opts.source,
+        notes: existing.notes ?? opts.notes,
+        updatedAt: new Date(),
+      })
+      .where(eq(contacts.id, existing.id));
+    contactId = existing.id;
+  } else {
+    const [c] = await db
+      .insert(contacts)
+      .values({
+        name: opts.name,
+        email,
+        linkedinUrl,
+        source: opts.source,
+        notes: opts.notes,
+        stage: "identified",
+        priority: "p2",
+      })
+      .returning();
+    contactId = c.id;
+  }
   await db
     .update(submissions)
-    .set({ triagedAt: new Date(), contactId: c.id })
+    .set({ triagedAt: new Date(), contactId })
     .where(eq(submissions.id, opts.submissionId));
   revalidatePath("/admin/submissions");
-  redirect(`/admin/contacts/${c.id}`);
+  redirect(`/admin/contacts/${contactId}`);
 }

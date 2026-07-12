@@ -21,6 +21,11 @@ import {
 } from "@/db";
 import { env } from "@/lib/env";
 import { slugify } from "@/lib/utils";
+import {
+  canonicalLinkedin,
+  normalizeEmail,
+  findContactByIdentity,
+} from "@/lib/contacts-dedup";
 
 async function requireUser() {
   const { userId } = await auth();
@@ -31,26 +36,6 @@ function str(v: FormDataEntryValue | null): string | null {
   if (typeof v !== "string") return null;
   const t = v.trim();
   return t === "" ? null : t;
-}
-
-/**
- * Canonicalise a LinkedIn URL so the same profile always produces the same
- * string (drives the unique index on prospects.linkedin_url). Strips
- * protocol/www/query/hash/trailing slash, lowercases, then re-prefixes https.
- */
-function canonicalLinkedin(url: string | null | undefined): string | null {
-  if (!url) return null;
-  let u = url.trim();
-  if (!u) return null;
-  u = u
-    .replace(/^https?:\/\//i, "")
-    .replace(/^www\./i, "")
-    .split("?")[0]
-    .split("#")[0]
-    .replace(/\/+$/, "")
-    .toLowerCase();
-  if (!u) return null;
-  return `https://${u}`;
 }
 
 // Best-effort usage capture for the Usage & cost page. Defensive: unknown
@@ -815,14 +800,13 @@ export async function promoteProspect(memberId: string) {
     .from(segments)
     .where(eq(segments.id, m.segmentId));
 
-  let existing = null;
-  if (p.linkedinUrl) {
-    const [ex] = await db
-      .select()
-      .from(contacts)
-      .where(eq(contacts.linkedinUrl, p.linkedinUrl));
-    existing = ex ?? null;
-  }
+  // Dedupe by canonical LinkedIn or email so promoting never creates a second
+  // contact for someone already in the CRM.
+  const email = normalizeEmail(p.email);
+  const existing = await findContactByIdentity({
+    linkedinUrl: p.linkedinUrl,
+    email,
+  });
 
   const source = `research:${seg?.slug ?? "segment"}`;
   const noteParts = [
@@ -843,7 +827,8 @@ export async function promoteProspect(memberId: string) {
         role: existing.role ?? p.title,
         company: existing.company ?? p.company,
         city: existing.city ?? p.city,
-        email: existing.email ?? p.email,
+        linkedinUrl: existing.linkedinUrl ?? canonicalLinkedin(p.linkedinUrl),
+        email: existing.email ?? email,
         expertise: existing.expertise?.length ? existing.expertise : p.roles,
         notes: existing.notes ?? notes,
         updatedAt: new Date(),
@@ -858,8 +843,8 @@ export async function promoteProspect(memberId: string) {
         role: p.title,
         company: p.company,
         city: p.city,
-        linkedinUrl: p.linkedinUrl,
-        email: p.email,
+        linkedinUrl: canonicalLinkedin(p.linkedinUrl),
+        email,
         expertise: p.roles,
         circle: "reach",
         stage: "identified",

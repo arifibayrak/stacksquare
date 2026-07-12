@@ -6,6 +6,11 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { db, contacts, touchLog, submissions, aiRuns, STAGES } from "@/db";
+import {
+  canonicalLinkedin,
+  normalizeEmail,
+  findContactByIdentity,
+} from "@/lib/contacts-dedup";
 
 const SENIORITY = ["peer", "mid", "senior", "c_suite"] as const;
 const RELATIONSHIP = ["warm_1st", "warm_2nd", "cold"] as const;
@@ -59,7 +64,18 @@ export async function createContact(formData: FormData) {
   if (!userId) throw new Error("Unauthorized");
 
   const parsed = ContactInput.parse(emptyToNull(parseFormData(formData)));
-  const [row] = await db.insert(contacts).values(parsed).returning();
+  const email = normalizeEmail(parsed.email);
+  const linkedinUrl = canonicalLinkedin(parsed.linkedinUrl);
+
+  // Dedupe: if this person already exists (by canonical LinkedIn or email),
+  // open the existing record instead of creating a second one.
+  const existing = await findContactByIdentity({ linkedinUrl, email });
+  if (existing) redirect(`/admin/contacts/${existing.id}`);
+
+  const [row] = await db
+    .insert(contacts)
+    .values({ ...parsed, email, linkedinUrl })
+    .returning();
   revalidatePath("/admin/contacts");
   revalidatePath("/admin/pipeline");
   redirect(`/admin/contacts/${row.id}`);
@@ -70,9 +86,15 @@ export async function updateContact(id: string, formData: FormData) {
   if (!userId) throw new Error("Unauthorized");
 
   const parsed = ContactInput.parse(emptyToNull(parseFormData(formData)));
+  // Keep identity keys canonical so the unique indexes stay authoritative.
   await db
     .update(contacts)
-    .set({ ...parsed, updatedAt: new Date() })
+    .set({
+      ...parsed,
+      email: normalizeEmail(parsed.email),
+      linkedinUrl: canonicalLinkedin(parsed.linkedinUrl),
+      updatedAt: new Date(),
+    })
     .where(eq(contacts.id, id));
   revalidatePath("/admin/contacts");
   revalidatePath(`/admin/contacts/${id}`);
