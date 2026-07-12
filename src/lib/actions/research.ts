@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { generateText, generateObject, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
@@ -26,6 +26,7 @@ import {
   normalizeEmail,
   findContactByIdentity,
 } from "@/lib/contacts-dedup";
+import { findProspectByIdentity } from "@/lib/research-dedup";
 
 async function requireUser() {
   const { userId } = await auth();
@@ -36,6 +37,23 @@ function str(v: FormDataEntryValue | null): string | null {
   if (typeof v !== "string") return null;
   const t = v.trim();
   return t === "" ? null : t;
+}
+
+/**
+ * Fill a prospect's blank LinkedIn from a later sighting. Guarded: if another
+ * prospect already holds that canonical URL (the unique index would reject it),
+ * leave the row as-is rather than throw.
+ */
+async function upgradeProspectLinkedin(prospectId: string, canonical: string) {
+  const [clash] = await db
+    .select({ id: prospects.id })
+    .from(prospects)
+    .where(eq(prospects.linkedinUrl, canonical));
+  if (clash) return;
+  await db
+    .update(prospects)
+    .set({ linkedinUrl: canonical, updatedAt: new Date() })
+    .where(eq(prospects.id, prospectId));
 }
 
 // Best-effort usage capture for the Usage & cost page. Defensive: unknown
@@ -157,28 +175,22 @@ export async function addSeedProspects(segmentId: string, raw: string) {
 
   for (const line of lines) {
     const canonical = canonicalLinkedin(line.linkedinUrl);
-    let prospectId: string | null = null;
 
-    if (canonical) {
-      const [ex] = await db
-        .select({ id: prospects.id })
-        .from(prospects)
-        .where(eq(prospects.linkedinUrl, canonical));
-      prospectId = ex?.id ?? null;
-    } else if (line.company) {
-      const [ex] = await db
-        .select({ id: prospects.id })
-        .from(prospects)
-        .where(
-          and(
-            ilike(prospects.name, line.name),
-            ilike(prospects.company, line.company),
-          ),
-        );
-      prospectId = ex?.id ?? null;
-    }
+    // Dedupe by canonical LinkedIn or name + company so the same person is
+    // never seeded twice.
+    const existing = await findProspectByIdentity({
+      linkedinUrl: line.linkedinUrl,
+      name: line.name,
+      company: line.company,
+    });
+    let prospectId: string;
 
-    if (!prospectId) {
+    if (existing) {
+      prospectId = existing.id;
+      if (!existing.linkedinUrl && canonical) {
+        await upgradeProspectLinkedin(existing.id, canonical);
+      }
+    } else {
       const [row] = await db
         .insert(prospects)
         .values({
@@ -187,6 +199,7 @@ export async function addSeedProspects(segmentId: string, raw: string) {
           linkedinUrl: canonical,
           links: line.otherLink ? [line.otherLink] : [],
           discoveredVia: "seed",
+          contactId: (await findContactByIdentity({ linkedinUrl: canonical }))?.id ?? null,
         })
         .returning({ id: prospects.id });
       prospectId = row.id;
@@ -447,28 +460,29 @@ export async function discoverProspects(
 
   for (const cand of usable) {
     const canonical = canonicalLinkedin(cand.linkedinUrl);
-    let prospectId: string | null = null;
 
-    if (canonical) {
-      const [ex] = await db
-        .select({ id: prospects.id })
-        .from(prospects)
-        .where(eq(prospects.linkedinUrl, canonical));
-      prospectId = ex?.id ?? null;
-    } else if (cand.company) {
-      const [ex] = await db
-        .select({ id: prospects.id })
-        .from(prospects)
-        .where(
-          and(
-            ilike(prospects.name, cand.name),
-            ilike(prospects.company, cand.company),
-          ),
-        );
-      prospectId = ex?.id ?? null;
-    }
+    // Dedupe by canonical LinkedIn or name + company. Both keys are checked
+    // even when the candidate has a LinkedIn, so a guessed/variant slug for a
+    // person we already found collapses onto the existing prospect.
+    const existing = await findProspectByIdentity({
+      linkedinUrl: cand.linkedinUrl,
+      name: cand.name,
+      company: cand.company,
+    });
+    let prospectId: string;
 
-    if (!prospectId) {
+    if (existing) {
+      prospectId = existing.id;
+      if (!existing.linkedinUrl && canonical) {
+        await upgradeProspectLinkedin(existing.id, canonical);
+      }
+    } else {
+      // Cross-reference the CRM: someone already a contact is linked, never
+      // re-created as a fresh unlinked research entry.
+      const contact = await findContactByIdentity({
+        linkedinUrl: canonical,
+        email: cand.email,
+      });
       const [row] = await db
         .insert(prospects)
         .values({
@@ -486,6 +500,7 @@ export async function discoverProspects(
           sourceUrl: cand.sourceUrl,
           originSignal: cand.originSignal,
           locationSignal: cand.locationSignal,
+          contactId: contact?.id ?? null,
         })
         .returning({ id: prospects.id });
       prospectId = row.id;

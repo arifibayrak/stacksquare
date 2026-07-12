@@ -12,9 +12,12 @@ import { db, contacts } from "@/db";
 
 /**
  * Canonicalise a LinkedIn URL so the same profile always produces the same
- * string. Strips protocol/www/query/hash/trailing slash, lowercases, then
- * re-prefixes https. Mirrors the canonicalisation used for prospects, so a
- * prospect and a contact for the same person collapse to one key.
+ * string. Strips protocol/www/country-subdomain/query/hash/trailing slash,
+ * lowercases, then re-prefixes https. Country subdomains matter: LinkedIn
+ * serves the same profile from `uk.linkedin.com`, `tr.linkedin.com`, etc., so
+ * without folding them the same person forks into duplicate rows. Mirrors the
+ * canonicalisation used for prospects, so a prospect and a contact for the same
+ * person collapse to one key.
  */
 export function canonicalLinkedin(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -23,6 +26,8 @@ export function canonicalLinkedin(url: string | null | undefined): string | null
   u = u
     .replace(/^https?:\/\//i, "")
     .replace(/^www\./i, "")
+    // Fold any 2-letter country/mobile subdomain of linkedin.com to the root.
+    .replace(/^[a-z]{2}\.linkedin\.com/i, "linkedin.com")
     .split("?")[0]
     .split("#")[0]
     .replace(/\/+$/, "")
