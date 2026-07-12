@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, eq, max } from "drizzle-orm";
 import { z } from "zod";
 import { generateText, generateObject, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
@@ -419,12 +419,14 @@ export async function discoverProspects(
   let webSearches = 0;
 
   // Number this search within the segment ("Search #N") and label it. Kept as a
-  // first-class run so many searches stay separable and reviewable.
-  const priorRuns = await db
-    .select({ id: discoveryRuns.id })
+  // first-class run so many searches stay separable and reviewable. Uses max+1
+  // (not count) so a backfilled Search #0 yields #1 next, and deleting a run
+  // never reissues a number that would collide with a survivor.
+  const [{ maxSeq } = { maxSeq: null }] = await db
+    .select({ maxSeq: max(discoveryRuns.seq) })
     .from(discoveryRuns)
     .where(eq(discoveryRuns.segmentId, segmentId));
-  const seq = priorRuns.length + 1;
+  const seq = (maxSeq ?? 0) + 1;
   const label = discoveryLabel(p);
   const paramsJson = {
     location: p.location ?? null,
