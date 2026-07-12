@@ -9,6 +9,7 @@ import {
   setContactPriority,
   setContactOwner,
   setContactCircle,
+  setContactParked,
 } from "@/lib/actions/contacts";
 import { QuickPill } from "@/components/admin/quick-pill";
 import { findContactInfo } from "@/lib/actions/enrich";
@@ -38,6 +39,34 @@ export function FindContactInfoButton({ id }: { id: string }) {
     >
       {pending ? "Searching…" : "Find contact info"}
     </button>
+  );
+}
+
+export function ParkedBanner({ id }: { id: string }) {
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
+      <span className="text-amber-800 dark:text-amber-300">
+        Parked (from research). Held off the Pipeline until you engage.
+      </span>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            try {
+              await setContactParked(id, false);
+              toast.success("Added to the pipeline");
+            } catch {
+              toast.error("Failed to add to pipeline");
+            }
+          })
+        }
+        className="ml-auto rounded-md bg-[var(--color-ink)] px-3 py-1.5 text-xs font-medium text-[var(--color-paper)] hover:opacity-80 disabled:opacity-50"
+      >
+        {pending ? "…" : "Add to pipeline"}
+      </button>
+    </div>
   );
 }
 

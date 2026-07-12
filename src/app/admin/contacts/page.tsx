@@ -130,9 +130,13 @@ export default async function ContactsPage({
     .orderBy(desc(contacts.updatedAt))
     .limit(200);
 
+  // Parked contacts (research leads not yet engaged) sit in their own section,
+  // out of the working circles, so they don't clutter the active relationships.
+  const parked = list.filter((c) => c.parked);
+  const active = list.filter((c) => !c.parked);
   const groups = CIRCLES.map((key) => ({
     key,
-    rows: list.filter((c) => c.circle === key),
+    rows: active.filter((c) => c.circle === key),
   }));
 
   return (
@@ -235,6 +239,22 @@ export default async function ContactsPage({
                 </div>
               </section>
             ))}
+          {parked.length > 0 && (
+            <section>
+              <div className="flex items-baseline gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink)]">
+                  Parked
+                </h2>
+                <span className="text-xs text-[var(--color-ink-muted)]">
+                  From research, not yet in the pipeline. Engage one to move it in
+                  · {parked.length}
+                </span>
+              </div>
+              <div className="mt-3">
+                <ContactsTable rows={parked} />
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>

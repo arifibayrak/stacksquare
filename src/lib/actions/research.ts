@@ -864,6 +864,69 @@ export async function dismissProspect(memberId: string) {
 }
 
 /**
+ * Mark a Discover prospect as "Checked" (status `qualified`) so it enters the
+ * cross-list Database, or un-check it back to enriched/discovered. Never
+ * downgrades an already promoted or dismissed membership.
+ */
+export async function setChecked(memberId: string, checked: boolean) {
+  await requireUser();
+  const [m] = await db
+    .select({
+      status: segmentMembers.status,
+      enrichedAt: prospects.enrichedAt,
+    })
+    .from(segmentMembers)
+    .innerJoin(prospects, eq(segmentMembers.prospectId, prospects.id))
+    .where(eq(segmentMembers.id, memberId));
+  if (!m) return;
+  if (m.status === "promoted" || m.status === "dismissed") return;
+
+  const next = checked ? "qualified" : m.enrichedAt ? "enriched" : "discovered";
+  await db
+    .update(segmentMembers)
+    .set({ status: next })
+    .where(eq(segmentMembers.id, memberId));
+  await revalidateMemberSegment(memberId);
+  revalidatePath("/admin/database");
+}
+
+/**
+ * Remove a person from the Database (un-check across every list): revert all of
+ * their `qualified` memberships to enriched/discovered. Promoted/dismissed
+ * memberships are untouched.
+ */
+export async function removeFromDatabase(prospectId: string) {
+  await requireUser();
+  const [p] = await db
+    .select({ enrichedAt: prospects.enrichedAt })
+    .from(prospects)
+    .where(eq(prospects.id, prospectId));
+  if (!p) return;
+  const restore = p.enrichedAt ? "enriched" : "discovered";
+
+  const mems = await db
+    .select({ segmentId: segmentMembers.segmentId })
+    .from(segmentMembers)
+    .where(
+      and(
+        eq(segmentMembers.prospectId, prospectId),
+        eq(segmentMembers.status, "qualified"),
+      ),
+    );
+  await db
+    .update(segmentMembers)
+    .set({ status: restore })
+    .where(
+      and(
+        eq(segmentMembers.prospectId, prospectId),
+        eq(segmentMembers.status, "qualified"),
+      ),
+    );
+  for (const m of mems) revalidatePath(`/admin/research/${m.segmentId}`);
+  revalidatePath("/admin/database");
+}
+
+/**
  * Global do-not-contact: mark every membership dismissed and record the reason
  * on the prospect. Use for GDPR objections / bad data across all maps.
  */
@@ -995,24 +1058,45 @@ export async function promoteProspect(memberId: string) {
     .from(segments)
     .where(eq(segments.id, m.segmentId));
 
-  // Dedupe by canonical LinkedIn or email so promoting never creates a second
-  // contact for someone already in the CRM.
+  // Resolve the target contact: an already-linked one (discovery auto-link)
+  // first, else dedupe by canonical LinkedIn or email so promoting never
+  // creates a second contact for someone already in the CRM.
   const email = normalizeEmail(p.email);
-  const existing = await findContactByIdentity({
-    linkedinUrl: p.linkedinUrl,
-    email,
-  });
+  let existing = null;
+  if (p.contactId) {
+    const [c] = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.id, p.contactId));
+    existing = c ?? null;
+  }
+  if (!existing) {
+    existing = await findContactByIdentity({
+      linkedinUrl: p.linkedinUrl,
+      email,
+    });
+  }
 
   const source = `research:${seg?.slug ?? "segment"}`;
-  const noteParts = [
-    p.bio ?? "",
-    p.sourceUrl ? `Source: ${p.sourceUrl}` : "",
-    p.notes ?? "",
-    `Promoted from Research: ${seg?.name ?? ""} (${new Date()
-      .toISOString()
-      .slice(0, 10)})`,
-  ].filter(Boolean);
-  const notes = noteParts.join("\n") || null;
+  const today = new Date().toISOString().slice(0, 10);
+  // Full context for a brand-new contact.
+  const notes =
+    [
+      p.bio ?? "",
+      p.sourceUrl ? `Source: ${p.sourceUrl}` : "",
+      p.notes ?? "",
+      `Promoted from Research: ${seg?.name ?? ""} (${today})`,
+    ]
+      .filter(Boolean)
+      .join("\n") || null;
+  // Concise provenance appended to an EXISTING contact (never overwrites).
+  const provenance = [
+    `Source: ${source}`,
+    p.sourceUrl ? `Ref: ${p.sourceUrl}` : "",
+    `Promoted from Research: ${seg?.name ?? ""} (${today})`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   let contactId: string;
   if (existing) {
@@ -1025,7 +1109,11 @@ export async function promoteProspect(memberId: string) {
         linkedinUrl: existing.linkedinUrl ?? canonicalLinkedin(p.linkedinUrl),
         email: existing.email ?? email,
         expertise: existing.expertise?.length ? existing.expertise : p.roles,
-        notes: existing.notes ?? notes,
+        // Always keep provenance traceable: stamp source if missing, and append
+        // (never drop) the promotion note. Do NOT touch `parked` — an existing
+        // contact may already be actively worked.
+        source: existing.source ?? source,
+        notes: existing.notes ? `${existing.notes}\n\n${provenance}` : provenance,
         updatedAt: new Date(),
       })
       .where(eq(contacts.id, existing.id));
@@ -1043,6 +1131,8 @@ export async function promoteProspect(memberId: string) {
         expertise: p.roles,
         circle: "reach",
         stage: "identified",
+        // Held off the Pipeline kanban until the team actually engages.
+        parked: true,
         source,
         notes,
       })
@@ -1061,6 +1151,7 @@ export async function promoteProspect(memberId: string) {
 
   revalidatePath(`/admin/research/${m.segmentId}`);
   revalidatePath(`/admin/research/${m.segmentId}/${memberId}`);
+  revalidatePath("/admin/database");
   revalidatePath("/admin/contacts");
   revalidatePath("/admin/pipeline");
   return { contactId, linked: Boolean(existing) };

@@ -103,6 +103,7 @@ export default async function SegmentPage({
     email: m.p.email,
     enriched: m.p.enrichedAt != null,
     contactId: m.p.contactId,
+    promoted: m.p.promotedAt != null,
     runId: m.runId,
     runSeq: m.runId ? (runSeqById.get(m.runId) ?? null) : null,
   }));
@@ -165,7 +166,7 @@ export default async function SegmentPage({
         href="/admin/research"
         className="text-sm text-[var(--color-ink-muted)] hover:text-brand-600"
       >
-        ← Research
+        ← Discover
       </Link>
       <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
         {seg.name}
@@ -322,10 +323,14 @@ export default async function SegmentPage({
       )}
 
       <p className="mt-8 text-xs text-[var(--color-ink-muted)]">
-        Prospects are internal research only and never appear on the public
-        site. Promoting a prospect creates a contact tagged{" "}
-        <span className="font-mono">research:{seg.slug}</span>; reach out 1:1
-        from there.
+        Internal research only, never shown on the public site. Check the good
+        ones into your{" "}
+        <Link href="/admin/database" className="underline hover:text-brand-600">
+          Database
+        </Link>
+        , then add them to Contacts (tagged{" "}
+        <span className="font-mono">research:{seg.slug}</span>). Added contacts
+        stay off the pipeline until you engage.
       </p>
     </div>
   );

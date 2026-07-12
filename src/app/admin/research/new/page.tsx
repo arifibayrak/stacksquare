@@ -13,13 +13,11 @@ export default function NewSegmentPage() {
         href="/admin/research"
         className="text-sm text-[var(--color-ink-muted)] hover:text-brand-600"
       >
-        ← Research
+        ← Discover
       </Link>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-        New database
-      </h1>
+      <h1 className="mt-2 text-2xl font-semibold tracking-tight">New list</h1>
       <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-        A targeted people-map. The brief guides the web-search discovery agent.
+        A targeted people-list. The brief guides the web-search discovery agent.
       </p>
 
       <form action={createSegment} className="mt-8 max-w-2xl space-y-5">
@@ -64,7 +62,7 @@ export default function NewSegmentPage() {
 
         <div className="flex gap-3">
           <button className="rounded-md bg-[var(--color-ink)] px-4 py-2 text-sm font-medium text-[var(--color-paper)] hover:opacity-80">
-            Create database
+            Create list
           </button>
           <Link
             href="/admin/research"
