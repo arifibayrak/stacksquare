@@ -45,8 +45,8 @@ export default async function ProspectDetailPage({
     notes: p.notes,
     discoveredVia: p.discoveredVia,
     sourceUrl: p.sourceUrl,
-    turkishSignal: p.turkishSignal,
-    londonSignal: p.londonSignal,
+    originSignal: p.originSignal,
+    locationSignal: p.locationSignal,
     enrichedAt: p.enrichedAt ? p.enrichedAt.toISOString() : null,
     contactId: p.contactId,
   };

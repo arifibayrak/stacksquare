@@ -27,8 +27,8 @@ export type ProspectDetail = {
   notes: string | null;
   discoveredVia: string | null;
   sourceUrl: string | null;
-  turkishSignal: string | null;
-  londonSignal: string | null;
+  originSignal: string | null;
+  locationSignal: string | null;
   enrichedAt: string | null;
   contactId: string | null;
 };
@@ -211,11 +211,8 @@ export function ProspectDetailClient({ p }: { p: ProspectDetail }) {
           </h3>
           <dl className="mt-2 space-y-1 text-[var(--color-ink-soft)]">
             <Prov label="Found via" value={p.discoveredVia} />
-            <Prov
-              label="Turkish signal"
-              value={p.turkishSignal}
-            />
-            <Prov label="London signal" value={p.londonSignal} />
+            <Prov label="Origin signal" value={p.originSignal} />
+            <Prov label="Location signal" value={p.locationSignal} />
             <Prov label="Email conf." value={p.emailConfidence} />
             <Prov
               label="Enriched"

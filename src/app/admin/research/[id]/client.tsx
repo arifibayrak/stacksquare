@@ -14,12 +14,15 @@ import {
   setSegmentMemberStatus,
 } from "@/lib/actions/research";
 import {
+  PROSPECT_ROLES,
   PROSPECT_ROLE_LABELS,
   PROSPECT_TIERS,
   PROSPECT_TIER_LABELS,
   PROSPECT_STATUSES,
   PROSPECT_STATUS_LABELS,
 } from "@/db/schema";
+
+type Role = (typeof PROSPECT_ROLES)[number];
 
 export type Row = {
   memberId: string;
@@ -32,8 +35,8 @@ export type Row = {
   city: string | null;
   linkedinUrl: string | null;
   roles: string[];
-  turkishSignal: string | null;
-  londonSignal: string | null;
+  originSignal: string | null;
+  locationSignal: string | null;
   email: string | null;
   enriched: boolean;
   contactId: string | null;
@@ -90,30 +93,105 @@ export function SeedForm({ segmentId }: { segmentId: string }) {
   );
 }
 
-export function DiscoverButton({ segmentId }: { segmentId: string }) {
+export function DiscoverForm({ segmentId }: { segmentId: string }) {
   const [pending, start] = useTransition();
-  return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={() =>
-        start(async () => {
-          try {
-            const r = await discoverProspects(segmentId);
-            toast.success(
-              `Discovery: ${r.linked} added · ${r.added} new${
-                r.dropped ? ` · ${r.dropped} filtered (weak London / no source)` : ""
-              }`,
-            );
-          } catch (e) {
-            toast.error("Discovery failed", { description: msg(e) });
-          }
-        })
+  const [location, setLocation] = useState("");
+  const [origin, setOrigin] = useState("");
+  const [keywords, setKeywords] = useState("");
+  const [count, setCount] = useState("12");
+  const [roles, setRoles] = useState<Role[]>([]);
+
+  function toggleRole(r: Role) {
+    setRoles((rs) => (rs.includes(r) ? rs.filter((x) => x !== r) : [...rs, r]));
+  }
+
+  function run() {
+    start(async () => {
+      try {
+        const r = await discoverProspects(segmentId, {
+          location: location.trim() || undefined,
+          origin: origin.trim() || undefined,
+          keywords: keywords.trim() || undefined,
+          roles: roles.length ? roles : undefined,
+          count: count.trim() ? Number(count) : undefined,
+        });
+        toast.success(
+          `Discovery: ${r.linked} added · ${r.added} new${
+            r.dropped ? ` · ${r.dropped} skipped (no source)` : ""
+          }`,
+        );
+      } catch (e) {
+        toast.error("Discovery failed", { description: msg(e) });
       }
-      className="rounded-md bg-[var(--color-ink)] px-4 py-1.5 text-sm font-medium text-[var(--color-paper)] hover:opacity-80 disabled:opacity-50"
-    >
-      {pending ? "Searching the web…" : "Discover with web search"}
-    </button>
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <input
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="Where based (e.g. London)"
+          className={inputCls}
+        />
+        <input
+          value={origin}
+          onChange={(e) => setOrigin(e.target.value)}
+          placeholder="Origin / heritage (e.g. Turkish) — optional"
+          className={inputCls}
+        />
+        <input
+          value={keywords}
+          onChange={(e) => setKeywords(e.target.value)}
+          placeholder="Titles / keywords (e.g. founder, CTO, technical)"
+          className={inputCls}
+        />
+        <input
+          type="number"
+          min={1}
+          max={30}
+          value={count}
+          onChange={(e) => setCount(e.target.value)}
+          placeholder="How many (max 30)"
+          className={inputCls}
+        />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs uppercase tracking-wide text-[var(--color-ink-muted)]">
+          Who:
+        </span>
+        {PROSPECT_ROLES.map((r) => {
+          const on = roles.includes(r);
+          return (
+            <button
+              key={r}
+              type="button"
+              onClick={() => toggleRole(r)}
+              className={
+                "rounded-full border px-2.5 py-1 text-xs transition-colors " +
+                (on
+                  ? "border-[var(--color-ink)] bg-[var(--color-ink)] text-[var(--color-paper)]"
+                  : "border-zinc-300 text-[var(--color-ink-soft)] hover:border-[var(--color-ink)] dark:border-zinc-700")
+              }
+            >
+              {PROSPECT_ROLE_LABELS[r]}
+            </button>
+          );
+        })}
+        <span className="text-xs text-[var(--color-ink-muted)]">
+          (none = any role)
+        </span>
+      </div>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={run}
+        className="rounded-md bg-[var(--color-ink)] px-4 py-1.5 text-sm font-medium text-[var(--color-paper)] hover:opacity-80 disabled:opacity-50"
+      >
+        {pending ? "Searching the web…" : "Discover with web search"}
+      </button>
+    </div>
   );
 }
 
@@ -186,8 +264,8 @@ export function ProspectRow({
       </td>
       <td className="px-4 py-3">
         <span className="flex flex-col gap-0.5">
-          <Signal label="TR" value={row.turkishSignal} />
-          <Signal label="LDN" value={row.londonSignal} />
+          <Signal label="ORIG" value={row.originSignal} />
+          <Signal label="LOC" value={row.locationSignal} />
         </span>
       </td>
       <td className="px-4 py-3">

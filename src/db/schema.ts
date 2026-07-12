@@ -403,8 +403,10 @@ export const prospects = pgTable(
     // "seed" | "web_search" — how the person entered the map.
     discoveredVia: text("discovered_via"),
     sourceUrl: text("source_url"),
-    turkishSignal: signalConfidenceEnum("turkish_signal"),
-    londonSignal: signalConfidenceEnum("london_signal"),
+    // Area-agnostic qualifiers: how strongly the person matches the search's
+    // target origin/heritage and target location (set per discovery run).
+    originSignal: signalConfidenceEnum("origin_signal"),
+    locationSignal: signalConfidenceEnum("location_signal"),
     // Objective global fact: set once web_search enrichment has run.
     enrichedAt: timestamp("enriched_at", { withTimezone: true }),
     // Promotion bridge (global): set once the person becomes a contact.

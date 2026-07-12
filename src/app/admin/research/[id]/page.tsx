@@ -13,7 +13,7 @@ import {
   PROSPECT_STATUSES,
   PROSPECT_STATUS_LABELS,
 } from "@/db";
-import { SeedForm, DiscoverButton, ProspectRow, type Row } from "./client";
+import { SeedForm, DiscoverForm, ProspectRow, type Row } from "./client";
 
 export const dynamic = "force-dynamic";
 
@@ -75,8 +75,8 @@ export default async function SegmentPage({
     city: m.p.city,
     linkedinUrl: m.p.linkedinUrl,
     roles: m.p.roles,
-    turkishSignal: m.p.turkishSignal,
-    londonSignal: m.p.londonSignal,
+    originSignal: m.p.originSignal,
+    locationSignal: m.p.locationSignal,
     email: m.p.email,
     enriched: m.p.enrichedAt != null,
     contactId: m.p.contactId,
@@ -145,19 +145,25 @@ export default async function SegmentPage({
 
       {/* Discovery panel */}
       <div className="mt-8 rounded-lg border border-[var(--color-rule)] bg-[var(--color-paper-soft)] p-5 dark:border-zinc-800 dark:bg-zinc-900/50">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink)]">
-            Discover
-          </h2>
-          <DiscoverButton segmentId={seg.id} />
-        </div>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink)]">
+          Discover
+        </h2>
         <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-          Web search finds people from public sources and lands them as
-          &ldquo;unverified&rdquo; for you to review, enrich, then promote. Or
-          paste your own seeds below.
+          Pick who to search for and where they should be based, then run a web
+          search. Anything left blank falls back to this database&rsquo;s brief.
+          Results land as &ldquo;unverified&rdquo; for you to review, enrich,
+          then promote. Origin and location fit show as signals on each row.
         </p>
         <div className="mt-4">
-          <SeedForm segmentId={seg.id} />
+          <DiscoverForm segmentId={seg.id} />
+        </div>
+        <div className="mt-5 border-t border-[var(--color-rule)] pt-4 dark:border-zinc-800">
+          <p className="text-xs uppercase tracking-wide text-[var(--color-ink-muted)]">
+            Or paste your own seeds
+          </p>
+          <div className="mt-2">
+            <SeedForm segmentId={seg.id} />
+          </div>
         </div>
       </div>
 

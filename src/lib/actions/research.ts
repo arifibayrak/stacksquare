@@ -282,14 +282,25 @@ const DiscoverCandidate = z.object({
   email: z.string().nullable(),
   emailConfidence: z.enum(SIGNAL_CONFIDENCES).nullable(),
   bio: z.string().nullable(),
-  turkishSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
-  londonSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
+  originSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
+  locationSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
   sourceUrl: z.string().nullable(),
   suggestedRoles: z.array(z.enum(PROSPECT_ROLES)).nullable(),
   suggestedTier: z.enum(PROSPECT_TIERS).nullable(),
 });
 
 const DiscoverOut = z.object({ candidates: z.array(DiscoverCandidate) });
+
+// Selectable, per-run search criteria. Everything is optional; whatever is set
+// sharpens the search, and the segment's brief fills the rest.
+const DiscoverParams = z.object({
+  location: z.string().trim().nullish(),
+  origin: z.string().trim().nullish(),
+  roles: z.array(z.enum(PROSPECT_ROLES)).nullish(),
+  keywords: z.string().trim().nullish(),
+  count: z.coerce.number().int().min(1).max(30).nullish(),
+});
+export type DiscoverParamsInput = z.input<typeof DiscoverParams>;
 
 // Phase 1: web research (tools, free-form text). Phase 2 extracts structure.
 // Anthropic's server-side web_search tool and forced structured output do not
@@ -299,28 +310,27 @@ const DISCOVER_RESEARCH_SYSTEM =
   "organisation, building a curated map of a specific group of people. Use web " +
   "search over public sources (Crunchbase, Dealroom, Sifted, company team/about " +
   "pages, accelerator cohort pages, conference speaker lists, reputable news) to " +
-  "find REAL, currently-active people who fit the brief. For each person, write " +
-  "their name, title, company, city, LinkedIn URL if found, a public SOURCE URL " +
-  "that verifies them, a one-line bio, evidence of Turkish origin/heritage, and " +
-  "evidence they are based in London. Never invent people or emails. Only give a " +
-  "business email if it is publicly published. Prefer PRECISION over recall: a " +
-  "shorter list of well-sourced people beats plausible guesses. Aim for up to " +
-  "~15 people. Write your findings as a clear, structured list.";
+  "find REAL, currently-active people who match the target below. For each " +
+  "person, write their name, title, company, city, LinkedIn URL if found, a " +
+  "public SOURCE URL that verifies them, a one-line bio, and any evidence about " +
+  "their origin/heritage and where they are currently based. Never invent people " +
+  "or emails. Only give a business email if it is publicly published. Prefer " +
+  "PRECISION over recall: a shorter list of well-sourced people beats plausible " +
+  "guesses. Write your findings as a clear, structured list.";
 
 const DISCOVER_EXTRACT_SYSTEM =
   "Extract structured candidates from the research notes. Return one entry per " +
   "real person the notes describe. Only include a person if the notes give a " +
   "public source URL for them. Use null for any field the notes do not support; " +
-  "never invent data (especially emails). turkishSignal / londonSignal reflect " +
-  "how strong the notes' evidence is. Set londonSignal to high or medium ONLY " +
-  "when the notes place the person currently living or working in London; if " +
-  "they are based elsewhere or London is unclear, set it to low. suggestedTier: " +
-  "a = clear high-signal founder actively building in London, b = solid fit, " +
-  "c = adjacent / ecosystem.";
+  "never invent data (especially emails). originSignal = how strongly the notes " +
+  "match the target origin/heritage; locationSignal = how strongly the notes " +
+  "place the person in the target location. Judge both honestly (high/medium/low) " +
+  "so a reviewer can filter. suggestedTier: a = clear high-signal match, b = " +
+  "solid fit, c = adjacent / peripheral.";
 
 export async function discoverProspects(
   segmentId: string,
-  briefOverride?: string,
+  params?: DiscoverParamsInput,
 ) {
   await requireUser();
   const [seg] = await db
@@ -329,11 +339,17 @@ export async function discoverProspects(
     .where(eq(segments.id, segmentId));
   if (!seg) throw new Error("Segment not found");
 
-  const brief = (briefOverride?.trim() || seg.brief || "").trim();
+  const p = DiscoverParams.parse(params ?? {});
+  const count = p.count ?? 12;
   const promptBrief = [
     `Database: ${seg.name}`,
     seg.description && `Description: ${seg.description}`,
-    brief && `Brief: ${brief}`,
+    seg.brief && `Brief: ${seg.brief}`,
+    p.roles?.length && `Who (roles): ${p.roles.join(", ")}`,
+    p.keywords && `Who (titles/keywords): ${p.keywords}`,
+    p.origin && `Origin / heritage: ${p.origin}`,
+    p.location && `Location: they should currently be based in ${p.location}`,
+    `Return up to ${count} people.`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -350,7 +366,7 @@ export async function discoverProspects(
       },
       stopWhen: stepCountIs(12),
       system: DISCOVER_RESEARCH_SYSTEM,
-      prompt: `Research the public web and compile a list of real people who fit this market-map brief:\n${promptBrief}`,
+      prompt: `Research the public web and compile a list of real people who match this target:\n${promptBrief}`,
     });
     notes = research.text?.trim() ?? "";
     if (!notes) throw new Error("web search returned no usable text");
@@ -372,7 +388,7 @@ export async function discoverProspects(
       model: anthropic(model),
       schema: DiscoverOut,
       system: DISCOVER_EXTRACT_SYSTEM,
-      prompt: `Research notes:\n\n${notes}\n\nReturn every real person from these notes as a structured candidate.`,
+      prompt: `Target criteria:\n${promptBrief}\n\nResearch notes:\n\n${notes}\n\nReturn every real person from these notes as a structured candidate.`,
     });
     candidates = extracted.object.candidates;
   } catch (err) {
@@ -386,15 +402,10 @@ export async function discoverProspects(
     throw new Error(`Discovery parse failed: ${message}`);
   }
 
-  // Precision gate: require a name, a public source URL, and a medium+ London
-  // signal. Hard-drops anyone we cannot place in London (including unknown
-  // signal), so the map stays "in London", not "Turkish founders anywhere".
-  const usable = candidates.filter(
-    (c) =>
-      c.name &&
-      c.sourceUrl &&
-      (c.londonSignal === "high" || c.londonSignal === "medium"),
-  );
+  // Precision gate (not a location filter): keep only people with a name and a
+  // verifiable public source URL. Origin/location fit is surfaced as signals for
+  // the reviewer to sort and filter, not silently dropped.
+  const usable = candidates.filter((c) => c.name && c.sourceUrl);
   const dropped = candidates.length - usable.length;
 
   let added = 0;
@@ -439,8 +450,8 @@ export async function discoverProspects(
           bio: cand.bio,
           discoveredVia: "web_search",
           sourceUrl: cand.sourceUrl,
-          turkishSignal: cand.turkishSignal,
-          londonSignal: cand.londonSignal,
+          originSignal: cand.originSignal,
+          locationSignal: cand.locationSignal,
         })
         .returning({ id: prospects.id });
       prospectId = row.id;
@@ -485,8 +496,8 @@ const EnrichOut = z.object({
   city: z.string().nullable(),
   links: z.array(z.string()).nullable(),
   bio: z.string().nullable(),
-  turkishSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
-  londonSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
+  originSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
+  locationSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
   summary: z.string().nullable(),
 });
 
@@ -494,16 +505,18 @@ const ENRICH_RESEARCH_SYSTEM =
   "You are a research assistant enriching ONE person in a market map. Use public " +
   "web search to verify and report their current title, company, city, a 1-2 " +
   "sentence public professional bio, public links, and (only if publicly " +
-  "published by them or their company) a business email. Note evidence of " +
-  "Turkish origin/heritage and of being based in London. Cross-check that results " +
-  "refer to the SAME person (match name + company/role). Never invent data. " +
-  "Write your findings as clear notes, citing where each fact came from.";
+  "published by them or their company) a business email. Note any evidence about " +
+  "their origin/heritage and where they are currently based. Cross-check that " +
+  "results refer to the SAME person (match name + company/role). Never invent " +
+  "data. Write your findings as clear notes, citing where each fact came from.";
 
 const ENRICH_EXTRACT_SYSTEM =
   "Extract structured fields for this one person from the research notes. Use " +
   "null for anything the notes do not support; never invent data. Include an " +
-  "email ONLY if the notes show it was publicly published. summary: 2-3 sentences " +
-  "on what was found and from where.";
+  "email ONLY if the notes show it was publicly published. originSignal / " +
+  "locationSignal reflect how strongly the notes support the person's " +
+  "origin/heritage and current location. summary: 2-3 sentences on what was " +
+  "found and from where.";
 
 export async function enrichProspect(prospectId: string) {
   await requireUser();
@@ -589,8 +602,8 @@ export async function enrichProspect(prospectId: string) {
       city: p.city ?? out.city ?? null,
       email: p.email ?? out.email ?? null,
       emailConfidence: p.emailConfidence ?? out.emailConfidence ?? null,
-      turkishSignal: p.turkishSignal ?? out.turkishSignal ?? null,
-      londonSignal: p.londonSignal ?? out.londonSignal ?? null,
+      originSignal: p.originSignal ?? out.originSignal ?? null,
+      locationSignal: p.locationSignal ?? out.locationSignal ?? null,
       bio: p.bio ?? out.bio ?? null,
       links,
       notes: p.notes ? `${p.notes}\n\n${noteLine}` : noteLine,
