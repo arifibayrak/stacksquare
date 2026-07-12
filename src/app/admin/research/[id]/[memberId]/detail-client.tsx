@@ -8,6 +8,7 @@ import {
   enrichProspect,
   promoteProspect,
   dismissProspectGlobal,
+  setChecked,
 } from "@/lib/actions/research";
 
 export type ProspectDetail = {
@@ -31,6 +32,8 @@ export type ProspectDetail = {
   locationSignal: string | null;
   enrichedAt: string | null;
   contactId: string | null;
+  status: string;
+  promoted: boolean;
 };
 
 const inputCls =
@@ -155,7 +158,7 @@ export function ProspectDetailClient({ p }: { p: ProspectDetail }) {
           >
             {pending ? "…" : "Enrich (web search)"}
           </button>
-          {p.contactId ? (
+          {p.promoted ? (
             <Link
               href={`/admin/contacts/${p.contactId}`}
               className="rounded-md bg-[var(--color-ink)] px-4 py-1.5 text-sm font-medium text-[var(--color-paper)] hover:opacity-80"
@@ -163,23 +166,50 @@ export function ProspectDetailClient({ p }: { p: ProspectDetail }) {
               View contact ↗
             </Link>
           ) : (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                start(async () => {
-                  try {
-                    await promoteProspect(p.memberId);
-                    toast.success(`${p.name} added to contacts`);
-                  } catch (e) {
-                    toast.error("Promote failed", { description: msg(e) });
-                  }
-                })
-              }
-              className="rounded-md bg-[var(--color-ink)] px-4 py-1.5 text-sm font-medium text-[var(--color-paper)] hover:opacity-80 disabled:opacity-50"
-            >
-              Promote to contact
-            </button>
+            <>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  start(async () => {
+                    const checked = p.status === "qualified";
+                    try {
+                      await setChecked(p.memberId, !checked);
+                      toast.success(
+                        checked ? "Removed from Database" : "Checked into Database",
+                      );
+                    } catch (e) {
+                      toast.error("Failed", { description: msg(e) });
+                    }
+                  })
+                }
+                className={
+                  "rounded-md border px-4 py-1.5 text-sm disabled:opacity-50 " +
+                  (p.status === "qualified"
+                    ? "border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                    : "border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800")
+                }
+              >
+                {p.status === "qualified" ? "✓ Checked" : "Check into Database"}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  start(async () => {
+                    try {
+                      await promoteProspect(p.memberId);
+                      toast.success(`${p.name} added to contacts`);
+                    } catch (e) {
+                      toast.error("Promote failed", { description: msg(e) });
+                    }
+                  })
+                }
+                className="rounded-md bg-[var(--color-ink)] px-4 py-1.5 text-sm font-medium text-[var(--color-paper)] hover:opacity-80 disabled:opacity-50"
+              >
+                Promote to contact
+              </button>
+            </>
           )}
           <button
             type="button"

@@ -8,6 +8,7 @@ import {
   DeleteContactButton,
   ContactQuickActions,
   FindContactInfoButton,
+  ParkedBanner,
 } from "./client";
 import { formatDate } from "@/lib/utils";
 
@@ -57,6 +58,12 @@ export default async function ContactDetail({
           <DeleteContactButton id={contact.id} />
         </div>
       </div>
+
+      {contact.parked && (
+        <div className="mt-4">
+          <ParkedBanner id={contact.id} />
+        </div>
+      )}
 
       <div className="mt-4">
         <ContactQuickActions

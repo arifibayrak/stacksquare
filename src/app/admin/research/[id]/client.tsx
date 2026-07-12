@@ -14,6 +14,7 @@ import {
   deleteDiscoveryRun,
   setProspectTier,
   setSegmentMemberStatus,
+  setChecked,
 } from "@/lib/actions/research";
 import {
   PROSPECT_ROLES,
@@ -43,6 +44,7 @@ export type Row = {
   email: string | null;
   enriched: boolean;
   contactId: string | null;
+  promoted: boolean;
   runId: string | null;
   runSeq: number | null;
 };
@@ -597,7 +599,7 @@ export function ProspectRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          {row.contactId ? (
+          {row.promoted ? (
             <Link
               href={`/admin/contacts/${row.contactId}`}
               className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
@@ -606,6 +608,42 @@ export function ProspectRow({
             </Link>
           ) : (
             <>
+              {(() => {
+                const checked = row.status === "qualified";
+                return (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() =>
+                      start(async () => {
+                        try {
+                          await setChecked(row.memberId, !checked);
+                          toast.success(
+                            checked
+                              ? `Removed ${row.name} from Database`
+                              : `${row.name} checked into Database`,
+                          );
+                        } catch (e) {
+                          toast.error("Failed", { description: msg(e) });
+                        }
+                      })
+                    }
+                    className={
+                      "rounded-md border px-2.5 py-1 text-xs disabled:opacity-50 " +
+                      (checked
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        : "border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800")
+                    }
+                    title={
+                      checked
+                        ? "In your Database. Click to remove."
+                        : "Check into your Database"
+                    }
+                  >
+                    {checked ? "✓ Checked" : "Check"}
+                  </button>
+                );
+              })()}
               <button
                 type="button"
                 disabled={pending}
@@ -637,6 +675,7 @@ export function ProspectRow({
                   })
                 }
                 className="rounded-md bg-[var(--color-ink)] px-2.5 py-1 text-xs font-medium text-[var(--color-paper)] hover:opacity-80 disabled:opacity-50"
+                title="Add straight to Contacts (kept off the pipeline until you engage)"
               >
                 Promote
               </button>

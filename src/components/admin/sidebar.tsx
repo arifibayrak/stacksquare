@@ -30,7 +30,10 @@ const sections = [
   },
   {
     label: "Research",
-    links: [{ href: "/admin/research", label: "Databases" }],
+    links: [
+      { href: "/admin/research", label: "Discover" },
+      { href: "/admin/database", label: "Database" },
+    ],
   },
   {
     label: "Inbox",

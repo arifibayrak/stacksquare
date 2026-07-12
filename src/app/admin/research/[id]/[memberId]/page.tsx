@@ -49,6 +49,8 @@ export default async function ProspectDetailPage({
     locationSignal: p.locationSignal,
     enrichedAt: p.enrichedAt ? p.enrichedAt.toISOString() : null,
     contactId: p.contactId,
+    status: m.status,
+    promoted: p.promotedAt != null,
   };
 
   return (

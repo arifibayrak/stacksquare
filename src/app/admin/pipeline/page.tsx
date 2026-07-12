@@ -1,13 +1,15 @@
 import { db, contacts } from "@/db";
-import { asc, desc } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { KanbanBoard } from "@/components/admin/kanban-board";
 
 export const dynamic = "force-dynamic";
 
 export default async function PipelinePage() {
+  // Parked contacts (research leads not yet engaged) are held off the board.
   const list = await db
     .select()
     .from(contacts)
+    .where(eq(contacts.parked, false))
     .orderBy(asc(contacts.priority), desc(contacts.updatedAt));
 
   return (

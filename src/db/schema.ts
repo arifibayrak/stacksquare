@@ -173,6 +173,11 @@ export const contacts = pgTable(
     lastTouchAt: timestamp("last_touch_at", { withTimezone: true }),
     notes: text("notes"),
     tags: text("tags").array().default([]).notNull(),
+    // Parked contacts exist in the CRM but are held OFF the active Pipeline
+    // kanban until the team actually engages. Set when a research prospect is
+    // added to Contacts; cleared on the first engagement (stage move, logged
+    // touch, next action set, or an explicit "Add to pipeline").
+    parked: boolean("parked").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -906,7 +911,9 @@ export const PROSPECT_STATUS_LABELS: Record<
 > = {
   discovered: "Discovered",
   enriched: "Enriched",
-  qualified: "Qualified",
+  // "qualified" is the reviewed/"Checked" stage: a person moved into the
+  // cross-list Database (/admin/database) for curation before Contacts.
+  qualified: "Checked",
   promoted: "Promoted",
   dismissed: "Dismissed",
 };

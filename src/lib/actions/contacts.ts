@@ -87,12 +87,14 @@ export async function updateContact(id: string, formData: FormData) {
 
   const parsed = ContactInput.parse(emptyToNull(parseFormData(formData)));
   // Keep identity keys canonical so the unique indexes stay authoritative.
+  // Setting a next action counts as engaging, so unpark into the pipeline.
   await db
     .update(contacts)
     .set({
       ...parsed,
       email: normalizeEmail(parsed.email),
       linkedinUrl: canonicalLinkedin(parsed.linkedinUrl),
+      ...(parsed.nextAction ? { parked: false } : {}),
       updatedAt: new Date(),
     })
     .where(eq(contacts.id, id));
@@ -108,9 +110,22 @@ export async function moveContactStage(
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
+  // Moving a card is engagement: bring a parked research lead onto the board.
   await db
     .update(contacts)
-    .set({ stage, updatedAt: new Date() })
+    .set({ stage, parked: false, updatedAt: new Date() })
+    .where(eq(contacts.id, id));
+  revalidatePath("/admin/pipeline");
+  revalidatePath("/admin/contacts");
+  revalidatePath(`/admin/contacts/${id}`);
+}
+
+export async function setContactParked(id: string, parked: boolean) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+  await db
+    .update(contacts)
+    .set({ parked, updatedAt: new Date() })
     .where(eq(contacts.id, id));
   revalidatePath("/admin/pipeline");
   revalidatePath("/admin/contacts");
@@ -203,9 +218,11 @@ export async function logTouch(formData: FormData) {
     summary,
     owner: (owner as never) || null,
   });
+  // Logging a touch is engagement: unpark into the pipeline.
   await db
     .update(contacts)
-    .set({ lastTouchAt: new Date(), updatedAt: new Date() })
+    .set({ lastTouchAt: new Date(), parked: false, updatedAt: new Date() })
     .where(eq(contacts.id, contactId));
   revalidatePath(`/admin/contacts/${contactId}`);
+  revalidatePath("/admin/pipeline");
 }

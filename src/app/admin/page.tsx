@@ -36,12 +36,15 @@ const PHASES = [
 ];
 
 async function getCounts() {
+  // Parked contacts (research leads not yet engaged) are excluded so the
+  // dashboard mirrors the Pipeline board.
   const stageCounts = await db
     .select({
       stage: contacts.stage,
       count: sql<number>`count(*)::int`,
     })
     .from(contacts)
+    .where(eq(contacts.parked, false))
     .groupBy(contacts.stage);
 
   const map = new Map(stageCounts.map((r) => [r.stage, r.count]));
