@@ -371,8 +371,12 @@ const DISCOVER_RESEARCH_SYSTEM =
   "living/working there NOW; exclude people who merely have past ties, a company " +
   "office there, or are based in another city. State each person's location " +
   "evidence explicitly. Never invent people or emails; only give a business " +
-  "email if publicly published. Prefer PRECISION over recall: a shorter, " +
-  "correctly-located list beats plausible guesses. Write findings as a clear list.";
+  "email if publicly published. Be thorough AND precise: every person MUST have a " +
+  "public source URL (and, if a location is given, verified current location " +
+  "there), but keep searching VARIED sources (accelerator cohort pages, " +
+  "Crunchbase/Dealroom, news, conference speaker lists, LinkedIn) until you reach " +
+  "the requested number or genuinely run out. Never pad the list with " +
+  "unverifiable names. Write findings as a clear list.";
 
 const DISCOVER_EXTRACT_SYSTEM =
   "Extract structured candidates from the research notes. Return one entry per " +
@@ -436,95 +440,149 @@ export async function discoverProspects(
     count,
   };
 
-  // Phase 1: research the open web, free-form.
-  let notes = "";
-  try {
-    const research = await generateText({
-      model: anthropic(model),
-      tools: {
-        web_search: anthropic.tools.webSearch_20250305({ maxUses: 8 }),
-      },
-      stopWhen: stepCountIs(12),
-      system: DISCOVER_RESEARCH_SYSTEM,
-      prompt: `Research the public web and compile a list of real people who match this target:\n${promptBrief}`,
-    });
-    notes = research.text?.trim() ?? "";
-    const u = usageTokens(research.totalUsage);
-    tokensIn += u.inputTokens;
-    tokensOut += u.outputTokens;
-    webSearches += countWebSearches(research.steps);
-    if (!notes) throw new Error("web search returned no usable text");
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "unknown";
-    await db.insert(discoveryRuns).values({
-      segmentId,
-      seq,
-      label,
-      params: paramsJson,
-      status: "error",
-      errorMessage: `Search failed: ${message}`,
-      model,
-    });
-    await db.insert(aiRuns).values({
-      kind: "discover_prospects",
-      input: { segmentId, brief: promptBrief, phase: "research" },
-      model,
-      errorMessage: message,
-    });
-    revalidatePath(`/admin/research/${segmentId}`);
-    throw new Error(`Discovery search failed: ${message}`);
+  // Exclusion set: everyone already in this list (any status), so the search
+  // spends its budget on NEW people and repeat searches don't re-surface them.
+  const existingMembers = await db
+    .select({
+      name: prospects.name,
+      company: prospects.company,
+      linkedinUrl: prospects.linkedinUrl,
+    })
+    .from(segmentMembers)
+    .innerJoin(prospects, eq(segmentMembers.prospectId, prospects.id))
+    .where(eq(segmentMembers.segmentId, segmentId));
+
+  const normText = (t: string | null | undefined) =>
+    (t ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const keysOf = (c: {
+    name: string | null;
+    company: string | null;
+    linkedinUrl: string | null;
+  }): string[] => {
+    const ks: string[] = [];
+    const li = canonicalLinkedin(c.linkedinUrl);
+    if (li) ks.push(`li:${li}`);
+    if (c.name && c.company)
+      ks.push(`nc:${normText(c.name)}|${normText(c.company)}`);
+    if (ks.length === 0 && c.name) ks.push(`n:${normText(c.name)}`);
+    return ks;
+  };
+  const label2 = (c: { name: string | null; company: string | null }) =>
+    c.company ? `${c.name} @ ${c.company}` : (c.name ?? "");
+
+  const memberKeys = new Set<string>();
+  const baseExclude: string[] = [];
+  for (const m of existingMembers) {
+    keysOf(m).forEach((k) => memberKeys.add(k));
+    baseExclude.push(label2(m));
   }
 
-  // Phase 2: extract structured candidates from the research notes (no tools).
-  let candidates: z.infer<typeof DiscoverCandidate>[];
-  try {
-    const extracted = await generateObject({
-      model: anthropic(model),
-      schema: DiscoverOut,
-      system: DISCOVER_EXTRACT_SYSTEM,
-      prompt: `Target criteria:\n${promptBrief}\n\nResearch notes:\n\n${notes}\n\nReturn every real person from these notes as a structured candidate.`,
-    });
-    candidates = extracted.object.candidates;
-    const u = usageTokens(extracted.usage);
-    tokensIn += u.inputTokens;
-    tokensOut += u.outputTokens;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "unknown";
-    await db.insert(discoveryRuns).values({
-      segmentId,
-      seq,
-      label,
-      params: paramsJson,
-      notes,
-      status: "error",
-      errorMessage: `Parse failed: ${message}`,
-      model,
-    });
-    await db.insert(aiRuns).values({
-      kind: "discover_prospects",
-      input: { segmentId, brief: promptBrief, phase: "extract", notes },
-      model,
-      errorMessage: message,
-    });
-    revalidatePath(`/admin/research/${segmentId}`);
-    throw new Error(`Discovery parse failed: ${message}`);
-  }
-
-  // Precision gate. Always require a name + verifiable public source URL. When a
-  // target location was specified, also require a medium+ location signal, so we
-  // only keep people who can actually be placed there (LinkedIn-verified) rather
-  // than people with mere ties. With no location set, keep all and surface the
-  // signal for manual review.
+  // Loop: research (excluding known people) -> extract -> precision-gate, adding
+  // unique NEW people until we reach the count, exhaust the web, or hit the caps.
+  const MAX_ROUNDS = 5;
+  const MAX_WEBSEARCHES = 40;
   const locationRequired = Boolean(p.location);
-  const usable = candidates.filter(
-    (c) =>
+  const passesGate = (c: z.infer<typeof DiscoverCandidate>) =>
+    Boolean(
       c.name &&
-      c.sourceUrl &&
-      (!locationRequired ||
-        c.locationSignal === "high" ||
-        c.locationSignal === "medium"),
-  );
-  const dropped = candidates.length - usable.length;
+        c.sourceUrl &&
+        (!locationRequired ||
+          c.locationSignal === "high" ||
+          c.locationSignal === "medium"),
+    );
+
+  const usable: z.infer<typeof DiscoverCandidate>[] = [];
+  const seenKeys = new Set<string>();
+  const notesParts: string[] = [];
+  let rounds = 0;
+  let dropped = 0;
+
+  while (
+    usable.length < count &&
+    rounds < MAX_ROUNDS &&
+    webSearches < MAX_WEBSEARCHES
+  ) {
+    rounds++;
+    const need = count - usable.length;
+    const exclude = [...baseExclude.slice(0, 150), ...usable.map(label2)];
+    const excludeBlock = exclude.length
+      ? `\n\nALREADY FOUND — do NOT return any of these; find DIFFERENT people:\n${exclude.join("\n")}`
+      : "";
+    const roundPrompt = `Research the public web and compile a list of real people who match this target:\n${promptBrief}\n\nFind ${need} more people not already listed.${excludeBlock}`;
+
+    let roundNotes = "";
+    try {
+      const research = await generateText({
+        model: anthropic(model),
+        tools: {
+          web_search: anthropic.tools.webSearch_20250305({
+            maxUses: Math.min(12, need + 3),
+          }),
+        },
+        stopWhen: stepCountIs(Math.min(16, need + 6)),
+        system: DISCOVER_RESEARCH_SYSTEM,
+        prompt: roundPrompt,
+      });
+      roundNotes = research.text?.trim() ?? "";
+      const u = usageTokens(research.totalUsage);
+      tokensIn += u.inputTokens;
+      tokensOut += u.outputTokens;
+      webSearches += countWebSearches(research.steps);
+      if (!roundNotes) throw new Error("web search returned no usable text");
+
+      const extracted = await generateObject({
+        model: anthropic(model),
+        schema: DiscoverOut,
+        system: DISCOVER_EXTRACT_SYSTEM,
+        prompt: `Target criteria:\n${promptBrief}\n\nResearch notes:\n\n${roundNotes}\n\nReturn every real person from these notes as a structured candidate.`,
+      });
+      const eu = usageTokens(extracted.usage);
+      tokensIn += eu.inputTokens;
+      tokensOut += eu.outputTokens;
+
+      const roundUsable = extracted.object.candidates.filter(passesGate);
+      dropped += extracted.object.candidates.length - roundUsable.length;
+
+      let addedThisRound = 0;
+      for (const c of roundUsable) {
+        const ks = keysOf(c);
+        if (ks.some((k) => memberKeys.has(k) || seenKeys.has(k))) continue;
+        ks.forEach((k) => seenKeys.add(k));
+        usable.push(c);
+        addedThisRound++;
+      }
+      notesParts.push(roundNotes);
+      if (addedThisRound === 0) break; // web exhausted — nothing new this round
+    } catch (err) {
+      // A hard failure on the very first round with nothing collected is a real
+      // error; a later-round failure just ends the loop with what we have.
+      if (rounds === 1 && usable.length === 0) {
+        const message = err instanceof Error ? err.message : "unknown";
+        await db.insert(discoveryRuns).values({
+          segmentId,
+          seq,
+          label,
+          params: paramsJson,
+          notes: roundNotes || null,
+          status: "error",
+          errorMessage: `Search failed: ${message}`,
+          model,
+        });
+        await db.insert(aiRuns).values({
+          kind: "discover_prospects",
+          input: { segmentId, brief: promptBrief, phase: "research" },
+          model,
+          errorMessage: message,
+        });
+        revalidatePath(`/admin/research/${segmentId}`);
+        throw new Error(`Discovery search failed: ${message}`);
+      }
+      break;
+    }
+  }
+
+  const notes = notesParts.join("\n\n---\n\n");
+  const exhausted = usable.length < count;
 
   // Record the run up front so each member can be stamped with it.
   const [run] = await db
@@ -610,11 +668,14 @@ export async function discoverProspects(
 
   const breakdown = signalBreakdown(usable);
   const summary = {
+    requested: count,
     found: usable.length,
     added,
     linked,
     dropped,
+    rounds,
     webSearches,
+    exhausted,
     ...breakdown,
   };
   await db
@@ -626,12 +687,14 @@ export async function discoverProspects(
     kind: "discover_prospects",
     input: { segmentId, brief: promptBrief, discoveryRunId: run.id },
     output: {
-      count: candidates.length,
+      requested: count,
       usable: usable.length,
       dropped,
       added,
       linked,
+      rounds,
       webSearches,
+      exhausted,
     },
     model,
     tokensIn,
@@ -643,10 +706,13 @@ export async function discoverProspects(
     runId: run.id,
     seq,
     label,
+    requested: count,
     found: usable.length,
     dropped,
     added,
     linked,
+    rounds,
+    exhausted,
     ...breakdown,
   };
 }

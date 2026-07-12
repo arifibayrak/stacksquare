@@ -130,22 +130,19 @@ export function DiscoverForm({ segmentId }: { segmentId: string }) {
           roles: roles.length ? roles : undefined,
           count: count.trim() ? Number(count) : undefined,
         });
-        const loc = r.byLocation;
-        const org = r.byOrigin;
-        const qual = [
-          loc && `location ${loc.high}H/${loc.medium}M/${loc.low}L`,
-          org && `origin ${org.high}H/${org.medium}M/${org.low}L`,
-        ]
-          .filter(Boolean)
-          .join(" · ");
-        toast.success(`Search #${r.seq}: ${r.found} found · ${r.added} new`, {
-          description: [
-            r.dropped ? `${r.dropped} skipped (no source / off-location)` : "",
-            qual,
-          ]
-            .filter(Boolean)
-            .join(" · "),
-        });
+        const parts = [
+          `${r.added} new`,
+          r.linked ? `${r.linked} already in list` : "",
+          r.dropped ? `${r.dropped} skipped (no source / off-location)` : "",
+          `${r.rounds} round${r.rounds === 1 ? "" : "s"}`,
+          r.exhausted && r.added < r.requested
+            ? "web exhausted — no more verified matches"
+            : "",
+        ].filter(Boolean);
+        toast.success(
+          `Search #${r.seq}: ${r.added} of ${r.requested} requested`,
+          { description: parts.join(" · ") },
+        );
       } catch (e) {
         toast.error("Discovery failed", { description: msg(e) });
       }
