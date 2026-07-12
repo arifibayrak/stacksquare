@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
-import { generateText, stepCountIs, Output } from "ai";
+import { generateText, generateObject, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { auth } from "@clerk/nextjs/server";
 import {
@@ -269,48 +269,51 @@ export async function updateProspect(
 // Discovery agent (web_search) — precision-first, human-review gate
 // ---------------------------------------------------------------------------
 
+// Structured-output fields are all nullable: the extraction pass fills what the
+// research found and leaves the rest null, so one thin candidate can't fail the
+// whole parse. The precision gate (require a sourceUrl) is enforced in code.
 const DiscoverCandidate = z.object({
   name: z.string(),
   title: z.string().nullable(),
   company: z.string().nullable(),
   city: z.string().nullable(),
   linkedinUrl: z.string().nullable(),
-  links: z.array(z.string()),
-  email: z
-    .string()
-    .nullable()
-    .describe("Only if the person/company has published it publicly"),
+  links: z.array(z.string()).nullable(),
+  email: z.string().nullable(),
   emailConfidence: z.enum(SIGNAL_CONFIDENCES).nullable(),
-  bio: z.string().describe("1-2 sentence public professional summary"),
-  turkishSignal: z
-    .enum(SIGNAL_CONFIDENCES)
-    .describe("Confidence the person is of Turkish origin/heritage"),
-  londonSignal: z
-    .enum(SIGNAL_CONFIDENCES)
-    .describe("Confidence the person is based in London"),
-  sourceUrl: z.string().describe("A public URL that verifies this person"),
-  suggestedRoles: z.array(z.enum(PROSPECT_ROLES)),
-  suggestedTier: z.enum(PROSPECT_TIERS),
+  bio: z.string().nullable(),
+  turkishSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
+  londonSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
+  sourceUrl: z.string().nullable(),
+  suggestedRoles: z.array(z.enum(PROSPECT_ROLES)).nullable(),
+  suggestedTier: z.enum(PROSPECT_TIERS).nullable(),
 });
 
 const DiscoverOut = z.object({ candidates: z.array(DiscoverCandidate) });
 
-const DISCOVER_SYSTEM =
+// Phase 1: web research (tools, free-form text). Phase 2 extracts structure.
+// Anthropic's server-side web_search tool and forced structured output do not
+// mix reliably in a single call ("No object generated"), so we split them.
+const DISCOVER_RESEARCH_SYSTEM =
   "You are a market-intelligence research assistant for StackSquare, an events " +
-  "organisation. You are building a curated map of a specific group of people. " +
-  "Enumerate REAL, currently-active people who fit the brief, using public web " +
-  "sources (Crunchbase, Dealroom, Sifted, company team/about pages, accelerator " +
-  "cohort pages, conference speaker lists, reputable news). For EACH candidate " +
-  "you MUST have a verifiable public sourceUrl; never invent people and never " +
-  "invent an email. Include a business email ONLY if the person or their company " +
-  "has published it publicly; otherwise null. Set turkishSignal (Turkish " +
-  "origin/heritage) and londonSignal (based in London) honestly by how strong " +
-  "the public evidence is, and drop anyone you cannot place in London. " +
-  "Cross-check name + company across sources so each candidate is one real " +
-  "person. Prefer PRECISION over recall: return fewer, well-sourced people " +
-  "rather than plausible guesses. suggestedTier: a = clear high-signal founder " +
-  "actively building in London, b = solid fit, c = adjacent / ecosystem. Return " +
-  "at most ~15 candidates per run.";
+  "organisation, building a curated map of a specific group of people. Use web " +
+  "search over public sources (Crunchbase, Dealroom, Sifted, company team/about " +
+  "pages, accelerator cohort pages, conference speaker lists, reputable news) to " +
+  "find REAL, currently-active people who fit the brief. For each person, write " +
+  "their name, title, company, city, LinkedIn URL if found, a public SOURCE URL " +
+  "that verifies them, a one-line bio, evidence of Turkish origin/heritage, and " +
+  "evidence they are based in London. Never invent people or emails. Only give a " +
+  "business email if it is publicly published. Prefer PRECISION over recall: a " +
+  "shorter list of well-sourced people beats plausible guesses. Aim for up to " +
+  "~15 people. Write your findings as a clear, structured list.";
+
+const DISCOVER_EXTRACT_SYSTEM =
+  "Extract structured candidates from the research notes. Return one entry per " +
+  "real person the notes describe. Only include a person if the notes give a " +
+  "public source URL for them. Use null for any field the notes do not support; " +
+  "never invent data (especially emails). turkishSignal / londonSignal reflect " +
+  "how strong the notes' evidence is. suggestedTier: a = clear high-signal " +
+  "founder actively building in London, b = solid fit, c = adjacent / ecosystem.";
 
 export async function discoverProspects(
   segmentId: string,
@@ -333,33 +336,61 @@ export async function discoverProspects(
     .join("\n");
 
   const model = env.modelFast();
-  let result;
+
+  // Phase 1: research the open web, free-form.
+  let notes = "";
   try {
-    result = await generateText({
+    const research = await generateText({
       model: anthropic(model),
       tools: {
         web_search: anthropic.tools.webSearch_20250305({ maxUses: 8 }),
       },
       stopWhen: stepCountIs(12),
-      output: Output.object({ schema: DiscoverOut }),
-      system: DISCOVER_SYSTEM,
-      prompt: `Find real people who fit this market-map brief:\n${promptBrief}`,
+      system: DISCOVER_RESEARCH_SYSTEM,
+      prompt: `Research the public web and compile a list of real people who fit this market-map brief:\n${promptBrief}`,
     });
+    notes = research.text?.trim() ?? "";
+    if (!notes) throw new Error("web search returned no usable text");
   } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown";
     await db.insert(aiRuns).values({
       kind: "discover_prospects",
-      input: { segmentId, brief: promptBrief },
+      input: { segmentId, brief: promptBrief, phase: "research" },
       model,
-      errorMessage: err instanceof Error ? err.message : "unknown",
+      errorMessage: message,
     });
-    throw new Error("Discovery failed");
+    throw new Error(`Discovery search failed: ${message}`);
   }
 
-  const out = result.output;
+  // Phase 2: extract structured candidates from the research notes (no tools).
+  let candidates: z.infer<typeof DiscoverCandidate>[];
+  try {
+    const extracted = await generateObject({
+      model: anthropic(model),
+      schema: DiscoverOut,
+      system: DISCOVER_EXTRACT_SYSTEM,
+      prompt: `Research notes:\n\n${notes}\n\nReturn every real person from these notes as a structured candidate.`,
+    });
+    candidates = extracted.object.candidates;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown";
+    await db.insert(aiRuns).values({
+      kind: "discover_prospects",
+      input: { segmentId, brief: promptBrief, phase: "extract", notes },
+      model,
+      errorMessage: message,
+    });
+    throw new Error(`Discovery parse failed: ${message}`);
+  }
+
+  // Precision gate: keep only people with a name and a public source URL.
+  const usable = candidates.filter((c) => c.name && c.sourceUrl);
+  const dropped = candidates.length - usable.length;
+
   let added = 0;
   let linked = 0;
 
-  for (const cand of out.candidates) {
+  for (const cand of usable) {
     const canonical = canonicalLinkedin(cand.linkedinUrl);
     let prospectId: string | null = null;
 
@@ -424,12 +455,12 @@ export async function discoverProspects(
   await db.insert(aiRuns).values({
     kind: "discover_prospects",
     input: { segmentId, brief: promptBrief },
-    output: { count: out.candidates.length, added, linked },
+    output: { count: candidates.length, usable: usable.length, dropped, added, linked },
     model,
   });
 
   revalidatePath(`/admin/research/${segmentId}`);
-  return { found: out.candidates.length, added, linked };
+  return { found: usable.length, dropped, added, linked };
 }
 
 // ---------------------------------------------------------------------------
@@ -442,22 +473,27 @@ const EnrichOut = z.object({
   title: z.string().nullable(),
   company: z.string().nullable(),
   city: z.string().nullable(),
-  links: z.array(z.string()),
-  bio: z.string(),
+  links: z.array(z.string()).nullable(),
+  bio: z.string().nullable(),
   turkishSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
   londonSignal: z.enum(SIGNAL_CONFIDENCES).nullable(),
-  summary: z.string().describe("2-3 sentences on what was found and from where"),
+  summary: z.string().nullable(),
 });
 
-const ENRICH_SYSTEM =
-  "You are a research assistant enriching ONE person in a market map. Using " +
-  "public web search, verify and fill in their current title, company, city, a " +
-  "1-2 sentence public professional bio, and public links. Include an email " +
-  "ONLY if publicly published by them or their company; set emailConfidence " +
-  "accordingly. Assess turkishSignal (Turkish origin/heritage) and londonSignal " +
-  "(based in London) from public evidence. Cross-check that results refer to the " +
-  "SAME person (match name + company/role). Never invent data; return null when " +
-  "nothing reliable is found.";
+const ENRICH_RESEARCH_SYSTEM =
+  "You are a research assistant enriching ONE person in a market map. Use public " +
+  "web search to verify and report their current title, company, city, a 1-2 " +
+  "sentence public professional bio, public links, and (only if publicly " +
+  "published by them or their company) a business email. Note evidence of " +
+  "Turkish origin/heritage and of being based in London. Cross-check that results " +
+  "refer to the SAME person (match name + company/role). Never invent data. " +
+  "Write your findings as clear notes, citing where each fact came from.";
+
+const ENRICH_EXTRACT_SYSTEM =
+  "Extract structured fields for this one person from the research notes. Use " +
+  "null for anything the notes do not support; never invent data. Include an " +
+  "email ONLY if the notes show it was publicly published. summary: 2-3 sentences " +
+  "on what was found and from where.";
 
 export async function enrichProspect(prospectId: string) {
   await requireUser();
@@ -479,34 +515,61 @@ export async function enrichProspect(prospectId: string) {
     .join("\n");
 
   const model = env.modelFast();
-  let result;
+
+  // Phase 1: research the open web, free-form.
+  let notes = "";
   try {
-    result = await generateText({
+    const research = await generateText({
       model: anthropic(model),
       tools: {
         web_search: anthropic.tools.webSearch_20250305({ maxUses: 5 }),
       },
       stopWhen: stepCountIs(8),
-      output: Output.object({ schema: EnrichOut }),
-      system: ENRICH_SYSTEM,
-      prompt: `Enrich this person for a market map:\n${profile}`,
+      system: ENRICH_RESEARCH_SYSTEM,
+      prompt: `Research this person for a market map and report what you find:\n${profile}`,
     });
+    notes = research.text?.trim() ?? "";
+    if (!notes) throw new Error("web search returned no usable text");
   } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown";
     await db.insert(aiRuns).values({
       kind: "enrich_prospect",
       contactId: p.contactId ?? null,
-      input: { prospectId, profile },
+      input: { prospectId, profile, phase: "research" },
       model,
-      errorMessage: err instanceof Error ? err.message : "unknown",
+      errorMessage: message,
     });
-    throw new Error("Enrichment failed");
+    throw new Error(`Enrichment search failed: ${message}`);
   }
 
-  const out = result.output;
-  const links = Array.from(new Set([...(p.links ?? []), ...(out.links ?? [])]));
-  const noteLine = `Enrichment (${new Date().toISOString().slice(0, 10)}): ${
-    out.summary
-  }${out.links.length ? `\nLinks: ${out.links.join(", ")}` : ""}`;
+  // Phase 2: extract structured fields from the research notes (no tools).
+  let out: z.infer<typeof EnrichOut>;
+  try {
+    const extracted = await generateObject({
+      model: anthropic(model),
+      schema: EnrichOut,
+      system: ENRICH_EXTRACT_SYSTEM,
+      prompt: `Person:\n${profile}\n\nResearch notes:\n${notes}\n\nExtract the structured fields.`,
+    });
+    out = extracted.object;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown";
+    await db.insert(aiRuns).values({
+      kind: "enrich_prospect",
+      contactId: p.contactId ?? null,
+      input: { prospectId, profile, phase: "extract", notes },
+      model,
+      errorMessage: message,
+    });
+    throw new Error(`Enrichment parse failed: ${message}`);
+  }
+
+  const outLinks = out.links ?? [];
+  const links = Array.from(new Set([...(p.links ?? []), ...outLinks]));
+  const summary = out.summary ?? notes.slice(0, 280);
+  const noteLine = `Enrichment (${new Date().toISOString().slice(0, 10)}): ${summary}${
+    outLinks.length ? `\nLinks: ${outLinks.join(", ")}` : ""
+  }`;
 
   await db
     .update(prospects)
