@@ -79,6 +79,27 @@ export async function findContactInfo(contactId: string) {
 
   const out = result.output;
 
+  // Best-effort usage capture for the Usage & cost page.
+  const usage = (result.totalUsage ?? {}) as {
+    inputTokens?: number;
+    outputTokens?: number;
+  };
+  const tokensIn = usage.inputTokens ?? 0;
+  const tokensOut = usage.outputTokens ?? 0;
+  let webSearches = 0;
+  const steps = (result as { steps?: unknown }).steps;
+  if (Array.isArray(steps)) {
+    for (const s of steps) {
+      const calls = (s as { toolCalls?: unknown[] }).toolCalls;
+      if (Array.isArray(calls)) {
+        for (const c of calls) {
+          if ((c as { toolName?: string }).toolName === "web_search")
+            webSearches++;
+        }
+      }
+    }
+  }
+
   // Fill only blank fields; record everything in a sourced note.
   const noteLine = `Enrichment (${new Date().toISOString().slice(0, 10)}): ${
     out.summary
@@ -98,8 +119,10 @@ export async function findContactInfo(contactId: string) {
     kind: "find_contact_info",
     contactId,
     input: { profile },
-    output: out,
+    output: { ...out, webSearches },
     model,
+    tokensIn,
+    tokensOut,
   });
 
   revalidatePath(`/admin/contacts/${contactId}`);
