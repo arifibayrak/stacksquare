@@ -5,6 +5,11 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { db, captures, contacts } from "@/db";
+import {
+  canonicalLinkedin,
+  normalizeEmail,
+  findContactByIdentity,
+} from "@/lib/contacts-dedup";
 
 async function requireUser() {
   const { userId } = await auth();
@@ -65,10 +70,12 @@ export async function promoteCapture(id: string) {
   const [cap] = await db.select().from(captures).where(eq(captures.id, id));
   if (!cap) throw new Error("Capture not found");
 
-  const [existing] = await db
-    .select()
-    .from(contacts)
-    .where(eq(contacts.linkedinUrl, cap.linkedinUrl));
+  const linkedinUrl = canonicalLinkedin(cap.linkedinUrl);
+  const email = normalizeEmail(cap.email);
+
+  // Dedupe by canonical LinkedIn or email so the same person is never promoted
+  // into a second contact.
+  const existing = await findContactByIdentity({ linkedinUrl, email });
 
   // Links harvested from the contact-info overlay ride in the payload.
   const payload = (cap.payload ?? {}) as { websites?: unknown };
@@ -88,7 +95,8 @@ export async function promoteCapture(id: string) {
         company: existing.company ?? cap.company,
         city: existing.city ?? cap.city,
         relationship: existing.relationship ?? cap.relationship,
-        email: existing.email ?? cap.email,
+        linkedinUrl: existing.linkedinUrl ?? linkedinUrl,
+        email: existing.email ?? email,
         phone: existing.phone ?? cap.phone,
         seniority: existing.seniority ?? cap.seniority,
         // Append harvested links if the contact has no notes yet.
@@ -105,9 +113,9 @@ export async function promoteCapture(id: string) {
         role: cap.role,
         company: cap.company,
         city: cap.city,
-        linkedinUrl: cap.linkedinUrl,
+        linkedinUrl,
         relationship: cap.relationship,
-        email: cap.email,
+        email,
         phone: cap.phone,
         seniority: cap.seniority,
         owner: cap.capturedBy,

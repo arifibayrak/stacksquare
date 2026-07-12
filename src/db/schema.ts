@@ -184,6 +184,11 @@ export const contacts = pgTable(
     index("contacts_stage_idx").on(t.stage),
     index("contacts_owner_idx").on(t.owner),
     index("contacts_priority_idx").on(t.priority),
+    // Structural dedupe: a person is stored once. email + linkedin_url are
+    // canonicalised on every write (see src/lib/contacts-dedup.ts). Postgres
+    // treats NULLs as distinct, so contacts lacking a key still coexist.
+    uniqueIndex("contacts_email_idx").on(t.email),
+    uniqueIndex("contacts_linkedin_url_idx").on(t.linkedinUrl),
   ],
 );
 

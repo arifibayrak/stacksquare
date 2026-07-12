@@ -35,8 +35,10 @@ Prospect.
 - The warm pipeline stays clean: thousands of cold prospects never swamp the
   Kanban, outreach queue, or contacts list, and no existing query needs a
   "hide the cold ones" filter.
-- Prospects can enforce a **unique** `linkedin_url` (unlike `contacts`, which has
-  none), giving real dedupe on the research side.
+- Prospects enforce a **unique** `linkedin_url`, giving real dedupe on the
+  research side. Contacts now enforce the same (unique `email` + canonical
+  `linkedin_url`) so a promoted prospect can never fork into two contacts. See
+  [ADR 0003](docs/adr/0003-contacts-enforce-unique-identity.md).
 - Cost: a second people-table and a promote step to keep in sync. Contacts and
   Prospects can drift after promotion (we link by `prospects.contact_id` but do
   not continuously reconcile).

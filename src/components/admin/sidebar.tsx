@@ -12,7 +12,6 @@ const sections = [
       { href: "/admin", label: "Dashboard" },
       { href: "/admin/pipeline", label: "Pipeline" },
       { href: "/admin/contacts", label: "Contacts" },
-      { href: "/admin/contacts/duplicates", label: "Duplicates" },
     ],
   },
   {
