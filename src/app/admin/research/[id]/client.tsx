@@ -10,6 +10,8 @@ import {
   enrichProspect,
   promoteProspect,
   dismissProspect,
+  deleteMember,
+  deleteDiscoveryRun,
   setProspectTier,
   setSegmentMemberStatus,
 } from "@/lib/actions/research";
@@ -21,6 +23,7 @@ import {
   PROSPECT_STATUSES,
   PROSPECT_STATUS_LABELS,
 } from "@/db/schema";
+import { formatDate } from "@/lib/utils";
 
 type Role = (typeof PROSPECT_ROLES)[number];
 
@@ -40,6 +43,35 @@ export type Row = {
   email: string | null;
   enriched: boolean;
   contactId: string | null;
+  runId: string | null;
+  runSeq: number | null;
+};
+
+export type RunCard = {
+  id: string;
+  seq: number;
+  label: string;
+  status: string;
+  errorMessage: string | null;
+  createdAt: string;
+  params: {
+    location: string | null;
+    origin: string | null;
+    roles: string[];
+    keywords: string | null;
+    count: number | null;
+  } | null;
+  summary: {
+    found?: number;
+    added?: number;
+    linked?: number;
+    dropped?: number;
+    webSearches?: number;
+    byOrigin?: { high: number; medium: number; low: number };
+    byLocation?: { high: number; medium: number; low: number };
+  } | null;
+  notes: string | null;
+  liveCount: number;
 };
 
 const inputCls =
@@ -115,11 +147,22 @@ export function DiscoverForm({ segmentId }: { segmentId: string }) {
           roles: roles.length ? roles : undefined,
           count: count.trim() ? Number(count) : undefined,
         });
-        toast.success(
-          `Discovery: ${r.linked} added · ${r.added} new${
-            r.dropped ? ` · ${r.dropped} skipped (no source / off-location)` : ""
-          }`,
-        );
+        const loc = r.byLocation;
+        const org = r.byOrigin;
+        const qual = [
+          loc && `location ${loc.high}H/${loc.medium}M/${loc.low}L`,
+          org && `origin ${org.high}H/${org.medium}M/${org.low}L`,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        toast.success(`Search #${r.seq}: ${r.found} found · ${r.added} new`, {
+          description: [
+            r.dropped ? `${r.dropped} skipped (no source / off-location)` : "",
+            qual,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        });
       } catch (e) {
         toast.error("Discovery failed", { description: msg(e) });
       }
@@ -195,6 +238,261 @@ export function DiscoverForm({ segmentId }: { segmentId: string }) {
   );
 }
 
+function chip(text: string) {
+  return (
+    <span
+      key={text}
+      className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] text-[var(--color-ink-soft)] dark:bg-zinc-800"
+    >
+      {text}
+    </span>
+  );
+}
+
+function SearchRunCard({
+  run,
+  segmentId,
+  active,
+}: {
+  run: RunCard;
+  segmentId: string;
+  active: boolean;
+}) {
+  const [pending, start] = useTransition();
+  const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const [gone, setGone] = useState(false);
+  if (gone) return null;
+
+  const p = run.params;
+  const s = run.summary;
+  const paramChips = [
+    p?.roles?.length && p.roles.map((r) => PROSPECT_ROLE_LABELS[r as Role] ?? r).join(", "),
+    p?.keywords && `“${p.keywords}”`,
+    p?.location && `in ${p.location}`,
+    p?.origin && `origin ${p.origin}`,
+    p?.count && `up to ${p.count}`,
+  ].filter(Boolean) as string[];
+
+  function del(alsoProspects: boolean) {
+    start(async () => {
+      try {
+        await deleteDiscoveryRun(run.id, alsoProspects);
+        toast.success(
+          alsoProspects
+            ? `Deleted Search #${run.seq} and its ${run.liveCount} people`
+            : `Removed Search #${run.seq}`,
+        );
+        setGone(true);
+      } catch (e) {
+        toast.error("Delete failed", { description: msg(e) });
+      }
+    });
+  }
+
+  return (
+    <li
+      className={
+        "rounded-lg border bg-white p-4 dark:bg-zinc-900 " +
+        (active
+          ? "border-brand-500 ring-1 ring-brand-500"
+          : "border-[var(--color-rule)] dark:border-zinc-800")
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-mono text-xs font-semibold text-[var(--color-ink)]">
+          Search #{run.seq}
+        </span>
+        <span className="text-sm text-[var(--color-ink-soft)]">{run.label}</span>
+        {run.status === "error" && (
+          <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-red-700 dark:bg-red-950 dark:text-red-400">
+            failed
+          </span>
+        )}
+        <span className="ml-auto text-xs text-[var(--color-ink-muted)]">
+          {formatDate(run.createdAt)}
+        </span>
+      </div>
+
+      {paramChips.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">{paramChips.map(chip)}</div>
+      )}
+
+      {run.status === "error" ? (
+        <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+          {run.errorMessage}
+        </p>
+      ) : (
+        <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
+          {s?.found ?? 0} found · {s?.added ?? 0} new · {s?.linked ?? 0} linked
+          {s?.dropped ? ` · ${s.dropped} skipped` : ""}
+          {s?.webSearches ? ` · ${s.webSearches} web searches` : ""}
+          {" · "}
+          <span className="text-[var(--color-ink-soft)]">
+            {run.liveCount} still here
+          </span>
+          {s?.byLocation && (
+            <>
+              {" · "}location {s.byLocation.high}H/{s.byLocation.medium}M/
+              {s.byLocation.low}L
+            </>
+          )}
+          {s?.byOrigin && (
+            <>
+              {" · "}origin {s.byOrigin.high}H/{s.byOrigin.medium}M/
+              {s.byOrigin.low}L
+            </>
+          )}
+        </p>
+      )}
+
+      {run.notes && (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="text-xs text-brand-600 hover:underline"
+          >
+            {open ? "Hide findings" : "Show findings"}
+          </button>
+          {open && (
+            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-[var(--color-paper-soft)] p-3 text-xs text-[var(--color-ink-soft)] dark:bg-zinc-950">
+              {run.notes}
+            </pre>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+        {run.liveCount > 0 &&
+          (active ? (
+            <Link
+              href={`/admin/research/${segmentId}`}
+              className="rounded-md border border-brand-500 px-2.5 py-1 text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30"
+            >
+              Clear filter
+            </Link>
+          ) : (
+            <Link
+              href={`/admin/research/${segmentId}?run=${run.id}`}
+              className="rounded-md border border-zinc-300 px-2.5 py-1 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            >
+              View {run.liveCount} results
+            </Link>
+          ))}
+
+        {!confirm ? (
+          <button
+            type="button"
+            onClick={() => setConfirm(true)}
+            className="text-zinc-400 hover:text-red-600"
+          >
+            Delete search…
+          </button>
+        ) : (
+          <span className="flex items-center gap-2">
+            <span className="text-[var(--color-ink-muted)]">Delete:</span>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => del(false)}
+              className="rounded border border-zinc-300 px-2 py-0.5 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              title="Keep the people, just remove this search record"
+            >
+              record only
+            </button>
+            {run.liveCount > 0 && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => del(true)}
+                className="rounded bg-red-600 px-2 py-0.5 font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                title="Delete this search and the people it found (promoted people are kept)"
+              >
+                + {run.liveCount} people
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setConfirm(false)}
+              className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+            >
+              cancel
+            </button>
+          </span>
+        )}
+      </div>
+    </li>
+  );
+}
+
+export function SearchesPanel({
+  runs,
+  segmentId,
+  ungroupedCount,
+  activeRun,
+}: {
+  runs: RunCard[];
+  segmentId: string;
+  ungroupedCount: number;
+  activeRun: string;
+}) {
+  if (runs.length === 0 && ungroupedCount === 0) return null;
+  return (
+    <div className="mt-8">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink)]">
+        Searches
+      </h2>
+      <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+        Each web search is kept separate. Click a search to see only its people,
+        expand its findings, or delete it.
+      </p>
+      <ul className="mt-3 space-y-2">
+        {runs.map((r) => (
+          <SearchRunCard
+            key={r.id}
+            run={r}
+            segmentId={segmentId}
+            active={activeRun === r.id}
+          />
+        ))}
+        {ungroupedCount > 0 && (
+          <li
+            className={
+              "flex flex-wrap items-center gap-2 rounded-lg border bg-white p-4 text-sm dark:bg-zinc-900 " +
+              (activeRun === "none"
+                ? "border-brand-500 ring-1 ring-brand-500"
+                : "border-[var(--color-rule)] dark:border-zinc-800")
+            }
+          >
+            <span className="font-mono text-xs font-semibold text-[var(--color-ink)]">
+              Ungrouped
+            </span>
+            <span className="text-[var(--color-ink-soft)]">
+              {ungroupedCount} added before search tracking, or seeded manually
+            </span>
+            {activeRun === "none" ? (
+              <Link
+                href={`/admin/research/${segmentId}`}
+                className="ml-auto rounded-md border border-brand-500 px-2.5 py-1 text-xs text-brand-600"
+              >
+                Clear filter
+              </Link>
+            ) : (
+              <Link
+                href={`/admin/research/${segmentId}?run=none`}
+                className="ml-auto rounded-md border border-zinc-300 px-2.5 py-1 text-xs hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              >
+                View
+              </Link>
+            )}
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
 function Signal({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
   const color =
@@ -219,7 +517,11 @@ export function ProspectRow({
 }) {
   const [pending, start] = useTransition();
   const [dismissed, setDismissed] = useState(row.status === "dismissed");
+  const [deleted, setDeleted] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
   const detailHref = `/admin/research/${segmentId}/${row.memberId}`;
+
+  if (deleted) return null;
 
   return (
     <tr
@@ -244,6 +546,15 @@ export function ProspectRow({
           <span className="ml-2 text-xs text-[var(--color-ink-muted)]">
             {row.city}
           </span>
+        )}
+        {row.runSeq != null && (
+          <Link
+            href={`/admin/research/${segmentId}?run=${row.runId}`}
+            title="Filter to this search"
+            className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-ink-muted)] hover:text-brand-600 dark:bg-zinc-800"
+          >
+            #{row.runSeq}
+          </Link>
         )}
       </td>
       <td className="px-4 py-3 text-[var(--color-ink-soft)]">
@@ -346,10 +657,49 @@ export function ProspectRow({
                 })
               }
               className="text-xs text-zinc-400 hover:text-zinc-600"
+              title="Soft-hide: keeps the row, marks it dismissed"
             >
               Dismiss
             </button>
           )}
+          {row.status !== "promoted" &&
+            (confirmDel ? (
+              <span className="flex items-center gap-1.5 text-xs">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() =>
+                    start(async () => {
+                      try {
+                        await deleteMember(row.memberId);
+                        setDeleted(true);
+                      } catch (e) {
+                        toast.error("Delete failed", { description: msg(e) });
+                      }
+                    })
+                  }
+                  className="rounded bg-red-600 px-2 py-0.5 font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDel(false)}
+                  className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                >
+                  cancel
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDel(true)}
+                className="text-xs text-zinc-400 hover:text-red-600"
+                title="Hard delete: removes the person from this list"
+              >
+                Delete
+              </button>
+            ))}
         </div>
       </td>
     </tr>

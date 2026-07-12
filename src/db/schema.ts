@@ -436,6 +436,37 @@ export const prospects = pgTable(
   ],
 );
 
+// One discovery search over a segment. Every web search is a named, numbered
+// run so results from different searches stay separable; its qualitative
+// research notes and a signal breakdown are persisted for review after the run.
+export const discoveryRuns = pgTable(
+  "discovery_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    segmentId: uuid("segment_id")
+      .notNull()
+      .references(() => segments.id, { onDelete: "cascade" }),
+    // Per-segment sequence: "Search #1", "#2", ... (stable, human-facing).
+    seq: integer("seq").notNull(),
+    // Human label derived from the params, e.g. "Founders in London (Turkish)".
+    label: text("label").notNull(),
+    // The selectable criteria used: { location, origin, roles, keywords, count }.
+    params: jsonb("params").notNull(),
+    // Phase-1 free-form web-research text (the qualitative findings).
+    notes: text("notes"),
+    // { found, added, linked, dropped, webSearches, byLocation, byOrigin }.
+    summary: jsonb("summary"),
+    model: text("model"),
+    // "ok" | "error".
+    status: text("status").default("ok").notNull(),
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("discovery_runs_segment_idx").on(t.segmentId)],
+);
+
 // Many-to-many membership. tier + lifecycle status are per-map judgments and
 // live here (mirrors event_targets); the person's identity stays on prospects.
 export const segmentMembers = pgTable(
@@ -448,6 +479,12 @@ export const segmentMembers = pgTable(
     prospectId: uuid("prospect_id")
       .notNull()
       .references(() => prospects.id, { onDelete: "cascade" }),
+    // Which discovery run first surfaced this person into this segment. Null for
+    // manually seeded members. Set null (not cascade) so deleting a run does not
+    // delete the person unless explicitly asked.
+    discoveryRunId: uuid("discovery_run_id").references(() => discoveryRuns.id, {
+      onDelete: "set null",
+    }),
     tier: prospectTierEnum("tier"),
     status: prospectStatusEnum("status").default("discovered").notNull(),
     fitScore: integer("fit_score"),
@@ -466,6 +503,7 @@ export const segmentMembers = pgTable(
     ),
     index("segment_members_segment_idx").on(t.segmentId),
     index("segment_members_status_idx").on(t.status),
+    index("segment_members_run_idx").on(t.discoveryRunId),
   ],
 );
 
@@ -680,6 +718,7 @@ export const aiRuns = pgTable("ai_runs", {
 
 export type Contact = typeof contacts.$inferSelect;
 export type Capture = typeof captures.$inferSelect;
+export type DiscoveryRun = typeof discoveryRuns.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
 export type TouchLog = typeof touchLog.$inferSelect;
 export type OutreachTemplate = typeof outreachTemplates.$inferSelect;
