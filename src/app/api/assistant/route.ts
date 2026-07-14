@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import {
   streamText,
@@ -40,7 +41,7 @@ const SYSTEM = [
   "You are the StackSquare admin assistant for the two founders, Arif and Kerem.",
   "StackSquare runs fireside rooms and expert sessions; Luma handles registration.",
   "Use the read tools to answer questions about tasks, follow-ups, the pipeline, and event attendees. Prefer calling a tool over guessing.",
-  "To create a task, call create_task; the user must approve it before it is written, so state clearly what you are about to create.",
+  "To create a task, call create_task directly with the details. Do not ask the user to confirm in text first; the tool has its own approval step the user must accept before anything is written.",
   "Be concise and concrete. No em dashes in your replies; use commas, periods, or the middle dot. Dates are YYYY-MM-DD.",
 ].join(" ");
 
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: anthropic(env.modelFast()),
-    system: SYSTEM,
+    system: `${SYSTEM} Today is ${today()} (UTC); resolve relative dates such as "Friday" against today.`,
     messages: await convertToModelMessages(messages),
     stopWhen: stepCountIs(8),
     tools: {
@@ -181,6 +182,8 @@ export async function POST(req: Request) {
             dueDate: dueDate ?? null,
             priority: priority ?? "p2",
           });
+          revalidatePath("/admin/tasks");
+          revalidatePath("/admin");
           return {
             created: true,
             title,

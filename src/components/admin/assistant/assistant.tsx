@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, isToolUIPart, getToolName } from "ai";
+import {
+  DefaultChatTransport,
+  isToolUIPart,
+  getToolName,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+} from "ai";
 
 // Global admin assistant. A floating button plus Cmd/Ctrl+K opens a slide-over
 // chat that streams over /api/assistant. Read tools run server-side; the
@@ -48,6 +53,9 @@ function AssistantPanel({ onClose }: { onClose: () => void }) {
   );
   const { messages, sendMessage, status, addToolApprovalResponse } = useChat({
     transport,
+    // Once the user answers an approval card, auto-continue so the server runs
+    // the approved tool and streams its result back.
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
   });
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
