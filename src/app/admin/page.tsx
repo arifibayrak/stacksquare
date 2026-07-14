@@ -90,7 +90,10 @@ export default async function AdminDashboard() {
     agenda.overdue.length +
     agenda.today.length +
     agenda.soon.length +
-    agenda.noDeadline.length;
+    agenda.noDeadline.length +
+    agenda.fromConversations.length +
+    agenda.goingCold.length +
+    agenda.unmatchedThreads;
 
   return (
     <div className="px-8 py-10">
@@ -127,14 +130,24 @@ export default async function AdminDashboard() {
           <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
             Today
           </h2>
-          {agenda.noDeadline.length > 0 && (
-            <Link
-              href="/admin/tasks"
-              className="text-[11px] text-amber-600 hover:underline"
-            >
-              {agenda.noDeadline.length} need a deadline
-            </Link>
-          )}
+          <div className="flex items-center gap-3">
+            {agenda.unmatchedThreads > 0 && (
+              <Link
+                href="/admin/outreach"
+                className="text-[11px] text-[var(--color-ink-muted)] hover:underline"
+              >
+                {agenda.unmatchedThreads} unmatched
+              </Link>
+            )}
+            {agenda.noDeadline.length > 0 && (
+              <Link
+                href="/admin/tasks"
+                className="text-[11px] text-amber-600 hover:underline"
+              >
+                {agenda.noDeadline.length} need a deadline
+              </Link>
+            )}
+          </div>
         </div>
         {agendaTotal === 0 ? (
           <p className="mt-4 rounded-lg border border-[var(--color-rule)] bg-white px-4 py-8 text-center text-sm text-[var(--color-ink-muted)] dark:border-zinc-800 dark:bg-zinc-900">
@@ -144,6 +157,16 @@ export default async function AdminDashboard() {
           <div className="mt-4 space-y-4">
             <AgendaGroup label="Overdue" items={agenda.overdue} tone="overdue" />
             <AgendaGroup label="Due today" items={agenda.today} tone="today" />
+            <AgendaGroup
+              label="From conversations"
+              items={agenda.fromConversations}
+              tone="conversation"
+            />
+            <AgendaGroup
+              label="Going cold"
+              items={agenda.goingCold}
+              tone="cold"
+            />
             <AgendaGroup label="This week" items={agenda.soon} tone="soon" />
           </div>
         )}
@@ -238,7 +261,7 @@ function AgendaGroup({
 }: {
   label: string;
   items: AgendaItem[];
-  tone: "overdue" | "today" | "soon";
+  tone: "overdue" | "today" | "soon" | "conversation" | "cold";
 }) {
   if (items.length === 0) return null;
   const dot =
@@ -246,7 +269,11 @@ function AgendaGroup({
       ? "bg-red-500"
       : tone === "today"
         ? "bg-amber-500"
-        : "bg-zinc-300";
+        : tone === "conversation"
+          ? "bg-brand-500"
+          : tone === "cold"
+            ? "bg-sky-400"
+            : "bg-zinc-300";
   return (
     <div>
       <div className="flex items-center gap-2">

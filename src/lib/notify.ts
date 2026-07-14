@@ -93,6 +93,8 @@ export async function sendDigestEmail(
   const body = [
     digestSection("Overdue", agenda.overdue),
     digestSection("Due today", agenda.today),
+    digestSection("From conversations", agenda.fromConversations),
+    digestSection("Going cold", agenda.goingCold),
     digestSection("Needs a deadline", agenda.noDeadline),
   ]
     .filter(Boolean)
@@ -101,9 +103,13 @@ export async function sendDigestEmail(
     agenda.soon.length > 0
       ? `<p style="color:${MUTED};margin-top:14px">${agenda.soon.length} more coming up this week.</p>`
       : "";
+  const unmatched =
+    agenda.unmatchedThreads > 0
+      ? `<p style="color:${MUTED};margin-top:6px">${agenda.unmatchedThreads} unmatched conversations to triage.</p>`
+      : "";
   const html = `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;color:#1a1a1a">
     <p>${greeting}</p>
-    ${body}${soon}
+    ${body}${soon}${unmatched}
     <p style="margin-top:18px"><a href="${url}" style="color:#5f43e6">Open the dashboard</a></p>
   </div>`;
   const due = agenda.overdue.length + agenda.today.length;
