@@ -142,7 +142,7 @@ export async function logPastedConversation(formData: FormData) {
     nextSteps: summary.nextSteps,
     coversTo: lastAt,
     messageCount: messages.length,
-    model: env.modelDeep(),
+    model: env.modelOutreach(),
   });
 
   await db

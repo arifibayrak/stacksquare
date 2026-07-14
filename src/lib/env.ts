@@ -9,6 +9,11 @@ function required(name: string): string {
 // without code changes. Keep these defaults in sync with the SDK type union.
 const FAST_DEFAULT = ["claude", "sonnet", "4", "6"].join("-");
 const DEEP_DEFAULT = ["claude", "opus", "4", "7"].join("-");
+// Outreach summarization is a summarize + light-extraction job, not deep
+// reasoning, so it defaults to Sonnet: near-Opus quality at lower cost/latency,
+// which matters when the Gmail cron summarizes many threads. Override with
+// ANTHROPIC_MODEL_OUTREACH (e.g. a Haiku id for the cheapest option).
+const OUTREACH_DEFAULT = ["claude", "sonnet", "4", "6"].join("-");
 
 export const env = {
   databaseUrl: () => required("DATABASE_URL"),
@@ -27,6 +32,8 @@ export const env = {
   lumaCalendarId: () => process.env.NEXT_PUBLIC_LUMA_CALENDAR_ID ?? null,
   modelFast: () => process.env.ANTHROPIC_MODEL_FAST ?? FAST_DEFAULT,
   modelDeep: () => process.env.ANTHROPIC_MODEL_DEEP ?? DEEP_DEFAULT,
+  modelOutreach: () =>
+    process.env.ANTHROPIC_MODEL_OUTREACH ?? OUTREACH_DEFAULT,
   // Gmail sync (Phase 2). Configured only when the founders connect Gmail.
   googleClientId: () => required("GOOGLE_CLIENT_ID"),
   googleClientSecret: () => required("GOOGLE_CLIENT_SECRET"),
