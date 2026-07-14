@@ -6,11 +6,12 @@ import { db, aiRuns } from "@/db";
 import { env } from "@/lib/env";
 
 /**
- * Outreach conversation summarization. Two-model split (mirrors the app's
- * fast/deep pattern): env.modelFast() triages whether a thread is worth logging
- * at all (junk filter), env.modelDeep() writes the rolling summary + extracts
- * commitments. Point ANTHROPIC_MODEL_FAST / ANTHROPIC_MODEL_DEEP at Fable 5 /
- * Opus 4.8 to run this split on those models.
+ * Outreach conversation summarization. Triage (junk filter), paste parsing, and
+ * the rolling summary + commitment extraction all run on env.modelOutreach(),
+ * which defaults to Sonnet. This is a summarize/extract job, not deep reasoning,
+ * so Opus is unnecessary and Sonnet is cheaper and faster at volume (the Gmail
+ * cron can summarize dozens of threads a day). Override with
+ * ANTHROPIC_MODEL_OUTREACH (e.g. a Haiku id for the cheapest option).
  *
  * Privacy (docs/adr/0004): raw message text is summarized in-memory and never
  * persisted. ai_runs.input stores only a hash + message count, never the text.
@@ -106,7 +107,7 @@ export async function parsePastedTranscript(
   const MAX = 60_000;
   const clipped = raw.length > MAX ? raw.slice(raw.length - MAX) : raw;
   const { output } = await generateText({
-    model: anthropic(env.modelFast()),
+    model: anthropic(env.modelOutreach()),
     output: Output.object({ schema: PastedTranscript }),
     system:
       "You convert a pasted conversation into a structured transcript. It may be " +
@@ -129,7 +130,7 @@ export async function triageThread(input: {
   messages: OutreachMessage[];
 }): Promise<Triage> {
   const { output } = await generateText({
-    model: anthropic(env.modelFast()),
+    model: anthropic(env.modelOutreach()),
     output: Output.object({ schema: TriageResult }),
     system:
       "You are a CRM triage filter for a small team's outreach. Decide if a " +
@@ -157,7 +158,7 @@ export async function summarizeThreadDelta(input: {
   previousSummary?: string | null;
   messages: OutreachMessage[];
 }): Promise<OutreachSummary> {
-  const model = env.modelDeep();
+  const model = env.modelOutreach();
   const sha = transcriptSha256(input.messages);
   try {
     const { output } = await generateText({

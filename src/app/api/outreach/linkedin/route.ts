@@ -226,7 +226,7 @@ export async function POST(request: Request) {
     coversFrom: firstAt,
     coversTo: lastAt,
     messageCount: messages.length,
-    model: env.modelDeep(),
+    model: env.modelOutreach(),
   });
 
   // Matched: remember this identity and freshen the contact's last-touch.

@@ -296,7 +296,7 @@ async function syncOneThread(opts: {
     coversFrom: firstAt,
     coversTo: lastAt,
     messageCount: transcript.length,
-    model: env.modelDeep(),
+    model: env.modelOutreach(),
   });
 
   if (contact) {
