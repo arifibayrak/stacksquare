@@ -1,7 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { eq, desc } from "drizzle-orm";
-import { db, contacts, touchLog } from "@/db";
+import {
+  db,
+  contacts,
+  touchLog,
+  outreachTimeline,
+  OUTREACH_SOURCE_LABELS,
+  OUTREACH_DIRECTION_LABELS,
+} from "@/db";
 import { ContactForm } from "@/components/admin/contact-form";
 import {
   TouchLogForm,
@@ -9,6 +16,7 @@ import {
   ContactQuickActions,
   FindContactInfoButton,
   ParkedBanner,
+  PasteConversation,
 } from "./client";
 import { formatDate } from "@/lib/utils";
 
@@ -32,6 +40,13 @@ export default async function ContactDetail({
     .from(touchLog)
     .where(eq(touchLog.contactId, id))
     .orderBy(desc(touchLog.happenedAt))
+    .limit(50);
+
+  const timeline = await db
+    .select()
+    .from(outreachTimeline)
+    .where(eq(outreachTimeline.contactId, id))
+    .orderBy(desc(outreachTimeline.createdAt))
     .limit(50);
 
   return (
@@ -117,6 +132,53 @@ export default async function ContactDetail({
                 ))}
               </ul>
             )}
+          </section>
+
+          <section>
+            <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-500">
+              Outreach timeline
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              AI summaries of DM / email / pasted conversations. Bodies are
+              never stored.
+            </p>
+            {timeline.length === 0 ? (
+              <p className="mt-4 text-sm text-zinc-500">
+                No conversations logged yet.
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {timeline.map((e) => (
+                  <li
+                    key={e.id}
+                    className="rounded-md border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  >
+                    <p className="text-xs text-zinc-500">
+                      {formatDate(e.coversTo ?? e.createdAt)} ·{" "}
+                      {OUTREACH_SOURCE_LABELS[e.source]} ·{" "}
+                      {OUTREACH_DIRECTION_LABELS[e.direction]}
+                      {e.owner ? ` · ${e.owner}` : ""}
+                    </p>
+                    <p className="mt-1">{e.summary}</p>
+                    {e.commitments && e.commitments.length > 0 && (
+                      <ul className="mt-2 list-disc pl-4 text-xs text-zinc-600 dark:text-zinc-400">
+                        {e.commitments.map((c, i) => (
+                          <li key={i}>{c}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {e.nextSteps && (
+                      <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
+                        Next: {e.nextSteps}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-4">
+              <PasteConversation contactId={contact.id} />
+            </div>
           </section>
         </aside>
       </div>

@@ -76,6 +76,7 @@ export const aiRunKindEnum = pgEnum("ai_run_kind", [
   "find_contact_info",
   "discover_prospects",
   "enrich_prospect",
+  "summarize_outreach",
 ]);
 
 export const eventStatusEnum = pgEnum("event_status", [
@@ -147,6 +148,22 @@ export const signalConfidenceEnum = pgEnum("signal_confidence", [
   "low",
 ]);
 
+// Where a logged outreach conversation came from. linkedin = DMs captured
+// passively by the Scout extension; gmail = synced via the official Gmail API;
+// manual = pasted in (calls, WhatsApp, in-person notes).
+export const outreachSourceEnum = pgEnum("outreach_source", [
+  "linkedin",
+  "gmail",
+  "manual",
+]);
+
+// Net direction of a summarized conversation delta.
+export const outreachDirectionEnum = pgEnum("outreach_direction", [
+  "outbound",
+  "inbound",
+  "mixed",
+]);
+
 export const contacts = pgTable(
   "contacts",
   {
@@ -206,6 +223,8 @@ export const contactsRelations = relations(contacts, ({ one, many }) => ({
   introductions: many(contacts, { relationName: "introductions" }),
   touchLog: many(touchLog),
   outreachLog: many(outreachLog),
+  identities: many(contactIdentities),
+  outreachTimeline: many(outreachTimeline),
 }));
 
 export const touchLog = pgTable("touch_log", {
@@ -721,6 +740,179 @@ export const aiRuns = pgTable("ai_runs", {
     .notNull(),
 });
 
+// --- Outreach timeline (multi-channel conversation logging) ----------------
+// Records outreach CONVERSATIONS against a contact as a per-contact timeline.
+// Per docs/adr/0004 we store AI summaries + minimal metadata, NEVER raw
+// message bodies: the counterpart never consented to us persisting their words.
+// Sources: LinkedIn DMs captured passively by the Scout extension, Gmail synced
+// via the official API, and manual paste-ins (calls, WhatsApp, in-person).
+
+// Maps one contact to all their known identities across channels, so a thread
+// from any source resolves to the right person. contacts.email +
+// contacts.linkedin_url stay the primary values; this holds every known
+// identity (incl. secondary emails / phone). Values are canonicalised on write.
+export const contactIdentities = pgTable(
+  "contact_identities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    contactId: uuid("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["linkedin", "email", "phone"] }).notNull(),
+    value: text("value").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("contact_identities_kind_value_idx").on(t.kind, t.value),
+    index("contact_identities_contact_idx").on(t.contactId),
+  ],
+);
+
+// One row per external conversation per founder account. Holds the dedup key +
+// incremental cursor + the ROLLING summary (latest state of the whole thread).
+export const outreachThreads = pgTable(
+  "outreach_threads",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    source: outreachSourceEnum("source").notNull(),
+    // Whose LinkedIn/Gmail account the thread belongs to.
+    owner: ownerEnum("owner").notNull(),
+    // LinkedIn conversation urn, Gmail threadId, or a random uuid for pastes.
+    externalThreadId: text("external_thread_id").notNull(),
+    // Null while unmatched: the thread awaits linking to a contact.
+    contactId: uuid("contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    // Snapshot of who the thread is with, for the unmatched-review UI.
+    counterpartName: text("counterpart_name"),
+    counterpartLinkedin: text("counterpart_linkedin"),
+    counterpartEmail: text("counterpart_email"),
+    subject: text("subject"),
+    // Rolling state, refreshed on every sync that finds new messages.
+    summary: text("summary"),
+    commitments: jsonb("commitments").$type<string[]>().default([]),
+    nextSteps: text("next_steps"),
+    // Incremental cursor + dedup: hash of the newest message we summarized.
+    // Same key on re-capture => no-op.
+    lastMessageKey: text("last_message_key"),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
+    messageCount: integer("message_count").default(0).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("outreach_threads_src_owner_ext_idx").on(
+      t.source,
+      t.owner,
+      t.externalThreadId,
+    ),
+    index("outreach_threads_contact_idx").on(t.contactId),
+  ],
+);
+
+// Append-only per-contact timeline. One row per sync delta ("what happened
+// since last capture"), summarized by the deep model. Never stores bodies.
+export const outreachTimeline = pgTable(
+  "outreach_timeline",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => outreachThreads.id, { onDelete: "cascade" }),
+    // Denormalized for fast per-contact reads; null while the thread is
+    // unmatched (backfilled when the thread is linked to a contact).
+    contactId: uuid("contact_id").references(() => contacts.id, {
+      onDelete: "cascade",
+    }),
+    source: outreachSourceEnum("source").notNull(),
+    owner: ownerEnum("owner").notNull(),
+    direction: outreachDirectionEnum("direction").notNull(),
+    summary: text("summary").notNull(),
+    commitments: jsonb("commitments").$type<string[]>().default([]),
+    nextSteps: text("next_steps"),
+    // Time window this entry covers and how many messages it summarized.
+    coversFrom: timestamp("covers_from", { withTimezone: true }),
+    coversTo: timestamp("covers_to", { withTimezone: true }),
+    messageCount: integer("message_count"),
+    model: text("model"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("outreach_timeline_contact_idx").on(t.contactId),
+    index("outreach_timeline_thread_idx").on(t.threadId),
+  ],
+);
+
+export const contactIdentitiesRelations = relations(
+  contactIdentities,
+  ({ one }) => ({
+    contact: one(contacts, {
+      fields: [contactIdentities.contactId],
+      references: [contacts.id],
+    }),
+  }),
+);
+
+export const outreachThreadsRelations = relations(
+  outreachThreads,
+  ({ one, many }) => ({
+    contact: one(contacts, {
+      fields: [outreachThreads.contactId],
+      references: [contacts.id],
+    }),
+    entries: many(outreachTimeline),
+  }),
+);
+
+export const outreachTimelineRelations = relations(
+  outreachTimeline,
+  ({ one }) => ({
+    thread: one(outreachThreads, {
+      fields: [outreachTimeline.threadId],
+      references: [outreachThreads.id],
+    }),
+    contact: one(contacts, {
+      fields: [outreachTimeline.contactId],
+      references: [contacts.id],
+    }),
+  }),
+);
+
+// A founder's connected Gmail mailbox (Phase 2). One per founder. Holds the
+// encrypted refresh token and the incremental sync cursor. Bodies are never
+// stored here; the sync job summarizes into outreach_timeline (see adr 0004).
+export const gmailAccounts = pgTable(
+  "gmail_accounts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    owner: ownerEnum("owner").notNull(),
+    email: text("email").notNull(),
+    // AES-256-GCM ciphertext of the OAuth refresh token (see src/lib/gmail.ts).
+    refreshTokenEnc: text("refresh_token_enc").notNull(),
+    // Gmail history cursor for incremental sync (reserved; the current sync
+    // uses a date-windowed search, so this is informational for now).
+    historyId: text("history_id"),
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    // "connected" | "error" | "revoked".
+    status: text("status").default("connected").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [uniqueIndex("gmail_accounts_owner_idx").on(t.owner)],
+);
+
 export type Contact = typeof contacts.$inferSelect;
 export type Capture = typeof captures.$inferSelect;
 export type DiscoveryRun = typeof discoveryRuns.$inferSelect;
@@ -743,6 +935,10 @@ export type NewSegment = typeof segments.$inferInsert;
 export type Prospect = typeof prospects.$inferSelect;
 export type NewProspect = typeof prospects.$inferInsert;
 export type SegmentMember = typeof segmentMembers.$inferSelect;
+export type ContactIdentity = typeof contactIdentities.$inferSelect;
+export type OutreachThread = typeof outreachThreads.$inferSelect;
+export type OutreachTimelineEntry = typeof outreachTimeline.$inferSelect;
+export type GmailAccount = typeof gmailAccounts.$inferSelect;
 
 export const STAGES = [
   "identified",
@@ -931,3 +1127,25 @@ export const SIGNAL_CONFIDENCE_LABELS: Record<
 
 // app_settings key for the public Luma calendar source.
 export const SETTING_LUMA_CALENDAR = "luma_calendar";
+
+export const OUTREACH_SOURCES = ["linkedin", "gmail", "manual"] as const;
+
+export const OUTREACH_SOURCE_LABELS: Record<
+  (typeof OUTREACH_SOURCES)[number],
+  string
+> = {
+  linkedin: "LinkedIn",
+  gmail: "Gmail",
+  manual: "Manual",
+};
+
+export const OUTREACH_DIRECTIONS = ["outbound", "inbound", "mixed"] as const;
+
+export const OUTREACH_DIRECTION_LABELS: Record<
+  (typeof OUTREACH_DIRECTIONS)[number],
+  string
+> = {
+  outbound: "Sent",
+  inbound: "Received",
+  mixed: "Exchange",
+};

@@ -1,10 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
   logAndMaybeSendOutreach,
   renderTemplate,
 } from "@/lib/actions/outreach";
+import {
+  linkThreadToContact,
+  dismissThread,
+} from "@/lib/actions/outreach-threads";
 
 type ContactLite = {
   id: string;
@@ -18,6 +23,209 @@ type TemplateLite = {
   name: string;
   channel: string;
 };
+
+type GmailAccountLite = {
+  owner: string;
+  email: string;
+  lastSyncAt: string | null;
+  status: string;
+};
+
+export function GmailCard({ accounts }: { accounts: GmailAccountLite[] }) {
+  const [pending, start] = useTransition();
+  const byOwner = (o: string) => accounts.find((a) => a.owner === o);
+
+  function syncNow() {
+    start(async () => {
+      try {
+        const res = await fetch("/api/gmail/sync", { method: "POST" });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const logged = (data.results ?? []).reduce(
+          (n: number, r: { logged?: number }) => n + (r.logged ?? 0),
+          0,
+        );
+        toast.success(`Gmail sync done. ${logged} logged.`);
+      } catch {
+        toast.error("Sync failed");
+      }
+    });
+  }
+
+  return (
+    <div className="rounded-md border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium">Gmail</h3>
+        <button
+          type="button"
+          onClick={syncNow}
+          disabled={pending}
+          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          {pending ? "Syncing…" : "Sync now"}
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-zinc-500">
+        Official Gmail API, read-only. Threads with known contacts are
+        summarized daily onto their timelines. Bodies are never stored.
+      </p>
+      <ul className="mt-3 space-y-2">
+        {(["arif", "kerem"] as const).map((o) => {
+          const a = byOwner(o);
+          return (
+            <li
+              key={o}
+              className="flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-2 dark:border-zinc-800"
+            >
+              <span className="font-medium">
+                {o === "arif" ? "Arif" : "Kerem"}
+              </span>
+              {a ? (
+                <span className="text-xs text-zinc-500">
+                  {a.email} · {a.status}
+                  {a.lastSyncAt ? ` · synced ${a.lastSyncAt}` : " · never synced"}
+                </span>
+              ) : (
+                <span className="text-xs text-zinc-500">not connected</span>
+              )}
+              <a
+                href={`/api/gmail/connect?owner=${o}`}
+                className="ml-auto rounded-md border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              >
+                {a ? "Reconnect" : "Connect"}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+type ContactOpt = { id: string; name: string; company: string | null };
+
+type UnmatchedThread = {
+  id: string;
+  sourceLabel: string;
+  counterpartName: string | null;
+  counterpartLinkedin: string | null;
+  summary: string | null;
+  when: string;
+};
+
+export function UnmatchedThreads({
+  threads,
+  contacts,
+}: {
+  threads: UnmatchedThread[];
+  contacts: ContactOpt[];
+}) {
+  if (threads.length === 0) {
+    return (
+      <p className="mt-4 text-sm text-zinc-500">
+        No unmatched conversations. Threads that match a contact go straight to
+        their timeline.
+      </p>
+    );
+  }
+  return (
+    <ul className="mt-4 space-y-3">
+      {threads.map((t) => (
+        <UnmatchedRow key={t.id} thread={t} contacts={contacts} />
+      ))}
+    </ul>
+  );
+}
+
+function UnmatchedRow({
+  thread,
+  contacts,
+}: {
+  thread: UnmatchedThread;
+  contacts: ContactOpt[];
+}) {
+  const [pending, start] = useTransition();
+  const [contactId, setContactId] = useState("");
+
+  function onLink() {
+    if (!contactId) {
+      toast.error("Pick a contact first");
+      return;
+    }
+    start(async () => {
+      try {
+        await linkThreadToContact(thread.id, contactId);
+        toast.success("Linked to contact");
+      } catch {
+        toast.error("Link failed");
+      }
+    });
+  }
+
+  function onDismiss() {
+    start(async () => {
+      try {
+        await dismissThread(thread.id);
+        toast.success("Dismissed");
+      } catch {
+        toast.error("Dismiss failed");
+      }
+    });
+  }
+
+  return (
+    <li className="rounded-md border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <p className="text-xs text-zinc-500">
+        {thread.when} · {thread.sourceLabel}
+      </p>
+      <p className="mt-1 font-medium">
+        {thread.counterpartName ?? "Unknown"}
+        {thread.counterpartLinkedin && (
+          <a
+            href={thread.counterpartLinkedin}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-2 text-xs font-normal text-brand-600 hover:underline"
+          >
+            profile
+          </a>
+        )}
+      </p>
+      {thread.summary && <p className="mt-1">{thread.summary}</p>}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <select
+          value={contactId}
+          onChange={(e) => setContactId(e.target.value)}
+          className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <option value="">Link to contact…</option>
+          {contacts.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+              {c.company ? ` (${c.company})` : ""}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={onLink}
+          disabled={pending}
+          className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        >
+          Link
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          disabled={pending}
+          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          Dismiss
+        </button>
+      </div>
+    </li>
+  );
+}
 
 export function OutreachComposer({
   contacts,

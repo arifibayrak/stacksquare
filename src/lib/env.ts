@@ -27,4 +27,11 @@ export const env = {
   lumaCalendarId: () => process.env.NEXT_PUBLIC_LUMA_CALENDAR_ID ?? null,
   modelFast: () => process.env.ANTHROPIC_MODEL_FAST ?? FAST_DEFAULT,
   modelDeep: () => process.env.ANTHROPIC_MODEL_DEEP ?? DEEP_DEFAULT,
+  // Gmail sync (Phase 2). Configured only when the founders connect Gmail.
+  googleClientId: () => required("GOOGLE_CLIENT_ID"),
+  googleClientSecret: () => required("GOOGLE_CLIENT_SECRET"),
+  // 32-byte key (hex or base64) for encrypting Gmail refresh tokens at rest.
+  gmailTokenKey: () => required("GMAIL_TOKEN_KEY"),
+  // Shared secret the Vercel cron sends as `Authorization: Bearer ...`.
+  cronSecret: () => process.env.CRON_SECRET,
 };
