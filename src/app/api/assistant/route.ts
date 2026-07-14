@@ -48,6 +48,9 @@ const SYSTEM = [
 export async function POST(req: Request) {
   const { userId } = await auth();
   if (!userId) return new Response("Unauthorized", { status: 401 });
+  // Defense in depth: the read tools expose CRM data, so require a founder
+  // identity (not just any authed session), matching the write tool.
+  if (!(await currentOwner())) return new Response("Forbidden", { status: 403 });
 
   const { messages }: { messages: UIMessage[] } = await req.json();
 

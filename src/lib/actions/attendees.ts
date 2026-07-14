@@ -140,7 +140,8 @@ export async function parseAttendeesPaste(eventId: string, text: string) {
   });
   await db.insert(aiRuns).values({
     kind: "parse_attendees",
-    input: { eventId, text: text.slice(0, 4000) },
+    // Store only the eventId + size, not the raw pasted guest list (ADR 0004).
+    input: { eventId, chars: text.length },
     output,
     model: env.modelFast(),
   });
