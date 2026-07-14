@@ -9,6 +9,7 @@ import {
   eventSpeakers,
   eventTargets,
   eventTasks,
+  eventAttendees,
   outreachTemplates,
   venues,
   EVENT_STATUS_LABELS,
@@ -18,6 +19,7 @@ import { CostsSection } from "@/components/admin/event-plan/costs-section";
 import { SpeakersSection } from "@/components/admin/event-plan/speakers-section";
 import { TargetsSection } from "@/components/admin/event-plan/targets-section";
 import { TasksSection } from "@/components/admin/event-plan/tasks-section";
+import { AttendeesSection } from "@/components/admin/event-plan/attendees-section";
 import { FollowUpSection } from "@/components/admin/event-plan/followup-section";
 import { DeleteEventButton } from "./client";
 
@@ -30,6 +32,7 @@ const NAV = [
   { href: "#speakers", label: "Speakers" },
   { href: "#targets", label: "Targets" },
   { href: "#tasks", label: "Tasks" },
+  { href: "#attendees", label: "Attendees" },
   { href: "#followup", label: "Follow-up" },
 ];
 
@@ -54,6 +57,7 @@ export default async function EventDetail({
     targetRows,
     taskRows,
     templates,
+    attendeeRows,
   ] = await Promise.all([
     db
       .select({ id: venues.id, name: venues.name, capacity: venues.capacity })
@@ -114,6 +118,19 @@ export default async function EventDetail({
       })
       .from(outreachTemplates)
       .orderBy(asc(outreachTemplates.name)),
+    db
+      .select({
+        id: eventAttendees.id,
+        name: eventAttendees.name,
+        email: eventAttendees.email,
+        phone: eventAttendees.phone,
+        status: eventAttendees.status,
+        followUp: eventAttendees.followUp,
+        contactId: eventAttendees.contactId,
+      })
+      .from(eventAttendees)
+      .where(eq(eventAttendees.eventId, id))
+      .orderBy(asc(eventAttendees.name)),
   ]);
 
   const linkedVenue = event.venueId
@@ -248,6 +265,7 @@ export default async function EventDetail({
           contacts={contactOptions}
         />
         <TasksSection eventId={event.id} tasks={taskRows} />
+        <AttendeesSection eventId={event.id} attendees={attendeeRows} />
         <FollowUpSection
           eventId={event.id}
           attendees={attendees}

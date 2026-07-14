@@ -77,6 +77,7 @@ export const aiRunKindEnum = pgEnum("ai_run_kind", [
   "discover_prospects",
   "enrich_prospect",
   "summarize_outreach",
+  "parse_attendees",
 ]);
 
 export const eventStatusEnum = pgEnum("event_status", [
@@ -91,6 +92,23 @@ export const eventTargetStatusEnum = pgEnum("event_target_status", [
   "registered",
   "attended",
   "no_show",
+]);
+
+// Where an imported Luma guest sits: registered but not yet arrived, showed up,
+// or a no-show. Derived from the CSV's approval + check-in columns on import.
+export const attendeeStatusEnum = pgEnum("attendee_status", [
+  "registered",
+  "attended",
+  "no_show",
+]);
+
+// Our follow-up posture on an attendee. Distinct from attendee_status (which is
+// what Luma recorded): this is what WE still owe them.
+export const attendeeFollowUpEnum = pgEnum("attendee_follow_up", [
+  "to_contact",
+  "contacted",
+  "promoted",
+  "skip",
 ]);
 
 export const speakerStatusEnum = pgEnum("speaker_status", [
@@ -695,6 +713,53 @@ export const eventTargets = pgTable(
   ],
 );
 
+// Luma guest list, imported from the free CSV export (or an AI-parsed paste).
+// Admin-only: guest PII never renders on the public site. This is a triage
+// inbox, not the CRM. Worthwhile attendees are promoted to a contact (which
+// also seeds an event_targets "attended" row so the existing follow-up flow
+// picks them up); the rest stay here without polluting the pipeline.
+export const eventAttendees = pgTable(
+  "event_attendees",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    email: text("email"),
+    phone: text("phone"),
+    status: attendeeStatusEnum("status").default("registered").notNull(),
+    // Registration answers + any extra CSV columns, as { header: value }.
+    answers: jsonb("answers"),
+    followUp: attendeeFollowUpEnum("follow_up").default("to_contact").notNull(),
+    // Set when promoted; links this guest to their CRM contact.
+    contactId: uuid("contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    note: text("note"),
+    // "csv" or "paste": how the row entered.
+    source: text("source").default("csv").notNull(),
+    importedAt: timestamp("imported_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    // One row per (event, email) so re-importing a CSV updates instead of
+    // duplicating. Null emails stay distinct (Postgres), so walk-ins without an
+    // email are de-duped by name in app code.
+    uniqueIndex("event_attendees_event_email_idx").on(t.eventId, t.email),
+    index("event_attendees_event_idx").on(t.eventId),
+    index("event_attendees_follow_idx").on(t.followUp),
+    index("event_attendees_contact_idx").on(t.contactId),
+  ],
+);
+
 // Process checklist rows; prep / logistics / followup are filtered views
 // of this one table. New events are seeded with a default checklist.
 export const eventTasks = pgTable(
@@ -975,6 +1040,8 @@ export type EventCost = typeof eventCosts.$inferSelect;
 export type EventSpeaker = typeof eventSpeakers.$inferSelect;
 export type EventTarget = typeof eventTargets.$inferSelect;
 export type EventTask = typeof eventTasks.$inferSelect;
+export type EventAttendee = typeof eventAttendees.$inferSelect;
+export type NewEventAttendee = typeof eventAttendees.$inferInsert;
 export type Segment = typeof segments.$inferSelect;
 export type NewSegment = typeof segments.$inferInsert;
 export type Prospect = typeof prospects.$inferSelect;
@@ -1053,6 +1120,38 @@ export const EVENT_TARGET_STATUS_LABELS: Record<
   registered: "Registered",
   attended: "Attended",
   no_show: "No-show",
+};
+
+export const ATTENDEE_STATUSES = [
+  "registered",
+  "attended",
+  "no_show",
+] as const;
+
+export const ATTENDEE_STATUS_LABELS: Record<
+  (typeof ATTENDEE_STATUSES)[number],
+  string
+> = {
+  registered: "Registered",
+  attended: "Attended",
+  no_show: "No-show",
+};
+
+export const ATTENDEE_FOLLOW_UPS = [
+  "to_contact",
+  "contacted",
+  "promoted",
+  "skip",
+] as const;
+
+export const ATTENDEE_FOLLOW_UP_LABELS: Record<
+  (typeof ATTENDEE_FOLLOW_UPS)[number],
+  string
+> = {
+  to_contact: "To contact",
+  contacted: "Contacted",
+  promoted: "Promoted",
+  skip: "Skip",
 };
 
 export const SPEAKER_STATUSES = [
