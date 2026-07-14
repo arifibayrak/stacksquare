@@ -7,6 +7,11 @@ import {
   dismissCapture,
   updateCapture,
 } from "@/lib/actions/captures";
+import {
+  linkThreadToContact,
+  acceptThread,
+  dismissThread,
+} from "@/lib/actions/outreach-threads";
 import { formatDate } from "@/lib/utils";
 import type { Capture } from "@/db/schema";
 
@@ -261,6 +266,152 @@ export function CaptureCard({ capture: c }: { capture: Capture }) {
       </div>
       </div>
       )}
+    </li>
+  );
+}
+
+export type ReviewThread = {
+  id: string;
+  when: string;
+  sourceLabel: string;
+  counterpartName: string | null;
+  counterpartLinkedin: string | null;
+  summary: string | null;
+  contactId: string | null;
+  contactName: string | null;
+  owner: string | null;
+};
+
+type ContactOpt = { id: string; name: string; company: string | null };
+
+/**
+ * The conversation review queue: captured LinkedIn DM logs and pasted chats
+ * land here as pending. Accept files the summary on the contact's timeline
+ * (linking or picking a contact first for unmatched ones); Dismiss drops it.
+ */
+export function ConversationReview({
+  threads,
+  contacts,
+}: {
+  threads: ReviewThread[];
+  contacts: ContactOpt[];
+}) {
+  if (threads.length === 0) {
+    return (
+      <p className="mt-4 rounded-md border border-zinc-200 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900">
+        No conversations waiting. Captured LinkedIn DM logs and pasted chats land
+        here to accept before they reach a contact&apos;s timeline.
+      </p>
+    );
+  }
+  return (
+    <ul className="mt-4 space-y-3">
+      {threads.map((t) => (
+        <ReviewRow key={t.id} thread={t} contacts={contacts} />
+      ))}
+    </ul>
+  );
+}
+
+function ReviewRow({
+  thread,
+  contacts,
+}: {
+  thread: ReviewThread;
+  contacts: ContactOpt[];
+}) {
+  const [pending, start] = useTransition();
+  const [contactId, setContactId] = useState("");
+  const matched = Boolean(thread.contactId);
+
+  function onAccept() {
+    start(async () => {
+      try {
+        if (matched) {
+          await acceptThread(thread.id);
+        } else {
+          if (!contactId) {
+            toast.error("Pick a contact first");
+            return;
+          }
+          await linkThreadToContact(thread.id, contactId);
+        }
+        toast.success("Accepted to timeline");
+      } catch {
+        toast.error("Accept failed");
+      }
+    });
+  }
+
+  function onDismiss() {
+    start(async () => {
+      try {
+        await dismissThread(thread.id);
+        toast.success("Dismissed");
+      } catch {
+        toast.error("Dismiss failed");
+      }
+    });
+  }
+
+  return (
+    <li className="rounded-md border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <p className="text-xs text-zinc-500">
+        {thread.when} · {thread.sourceLabel}
+        {thread.owner ? ` · ${thread.owner}` : ""}
+      </p>
+      <p className="mt-1 font-medium">
+        {thread.counterpartName ?? "Unknown"}
+        {matched && thread.contactName && (
+          <span className="ml-2 text-xs font-normal text-brand-600">
+            → {thread.contactName}
+          </span>
+        )}
+        {thread.counterpartLinkedin && (
+          <a
+            href={thread.counterpartLinkedin}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-2 text-xs font-normal text-brand-600 hover:underline"
+          >
+            profile
+          </a>
+        )}
+      </p>
+      {thread.summary && <p className="mt-1">{thread.summary}</p>}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {!matched && (
+          <select
+            value={contactId}
+            onChange={(e) => setContactId(e.target.value)}
+            className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">Link to contact…</option>
+            {contacts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+                {c.company ? ` (${c.company})` : ""}
+              </option>
+            ))}
+          </select>
+        )}
+        <button
+          type="button"
+          onClick={onAccept}
+          disabled={pending}
+          className="rounded-md bg-[var(--color-ink)] px-3 py-1.5 text-xs font-medium text-[var(--color-paper)] hover:opacity-80 disabled:opacity-50"
+        >
+          {matched ? "Accept" : "Link & accept"}
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          disabled={pending}
+          className="ml-auto rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-500 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          Dismiss
+        </button>
+      </div>
     </li>
   );
 }

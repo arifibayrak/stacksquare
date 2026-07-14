@@ -1,18 +1,13 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { db, outreachThreads, outreachTimeline, contacts } from "@/db";
-import { env } from "@/lib/env";
+import { CHANNELS } from "@/db/schema";
 import { upsertIdentity } from "@/lib/outreach-identity";
-import {
-  parsePastedTranscript,
-  summarizeThreadDelta,
-  lastMessageKey,
-} from "@/lib/outreach-summarize";
+import { recordPastedConversation } from "@/lib/outreach-paste";
 
 async function requireUser() {
   const { userId } = await auth();
@@ -20,9 +15,10 @@ async function requireUser() {
 }
 
 /**
- * Link an unmatched outreach thread to a contact: set the thread's contactId,
+ * Accept an unmatched conversation from the review queue: link it to a contact,
  * backfill its timeline entries, remember the counterpart's identity so future
- * threads auto-match, and freshen the contact's last-touch.
+ * threads auto-match, freshen last-touch, and mark it accepted so its summary
+ * now shows on that contact's timeline.
  */
 export async function linkThreadToContact(threadId: string, contactId: string) {
   await requireUser();
@@ -43,7 +39,7 @@ export async function linkThreadToContact(threadId: string, contactId: string) {
 
   await db
     .update(outreachThreads)
-    .set({ contactId, updatedAt: new Date() })
+    .set({ contactId, reviewStatus: "accepted", updatedAt: new Date() })
     .where(eq(outreachThreads.id, threadId));
   await db
     .update(outreachTimeline)
@@ -60,22 +56,60 @@ export async function linkThreadToContact(threadId: string, contactId: string) {
     .set({ lastTouchAt: thread.lastMessageAt ?? new Date() })
     .where(eq(contacts.id, contactId));
 
-  revalidatePath("/admin/outreach");
+  revalidatePath("/admin/scout");
   revalidatePath(`/admin/contacts/${contactId}`);
   return { ok: true };
 }
 
-/** Dismiss an unmatched thread. Cascades its timeline entries away. */
+/**
+ * Accept an already-matched conversation from the review queue: mark it accepted
+ * (its summary reaches the contact's timeline) and freshen last-touch.
+ */
+export async function acceptThread(threadId: string) {
+  await requireUser();
+
+  const [thread] = await db
+    .select()
+    .from(outreachThreads)
+    .where(eq(outreachThreads.id, threadId))
+    .limit(1);
+  if (!thread) throw new Error("Thread not found");
+
+  await db
+    .update(outreachThreads)
+    .set({ reviewStatus: "accepted", updatedAt: new Date() })
+    .where(eq(outreachThreads.id, threadId));
+
+  if (thread.contactId) {
+    await db
+      .update(contacts)
+      .set({ lastTouchAt: thread.lastMessageAt ?? new Date() })
+      .where(eq(contacts.id, thread.contactId));
+    revalidatePath(`/admin/contacts/${thread.contactId}`);
+  }
+  revalidatePath("/admin/scout");
+  return { ok: true };
+}
+
+/**
+ * Dismiss a conversation from the review queue. Marked (not deleted) so a later
+ * re-capture of the same thread does not resurrect it, and it never reaches a
+ * timeline.
+ */
 export async function dismissThread(threadId: string) {
   await requireUser();
-  await db.delete(outreachThreads).where(eq(outreachThreads.id, threadId));
-  revalidatePath("/admin/outreach");
+  await db
+    .update(outreachThreads)
+    .set({ reviewStatus: "dismissed", updatedAt: new Date() })
+    .where(eq(outreachThreads.id, threadId));
+  revalidatePath("/admin/scout");
   return { ok: true };
 }
 
 const PasteInput = z.object({
   contactId: z.string().uuid(),
   owner: z.enum(["arif", "kerem", "both"]).default("arif"),
+  channel: z.enum(CHANNELS).optional().nullable(),
   // Whole WhatsApp / email exports can be long; accept big pastes (the parser
   // keeps the most recent portion) rather than rejecting them.
   text: z.string().min(1).max(500_000),
@@ -93,63 +127,19 @@ export async function logPastedConversation(formData: FormData) {
   const parsed = PasteInput.parse({
     contactId: raw.contactId,
     owner: raw.owner || "arif",
+    channel: raw.channel || null,
     text: raw.text,
   });
 
-  const [contact] = await db
-    .select()
-    .from(contacts)
-    .where(eq(contacts.id, parsed.contactId))
-    .limit(1);
-  if (!contact) throw new Error("Contact not found");
-
-  const { counterpartName, messages } = await parsePastedTranscript(parsed.text);
-  if (!messages.length) throw new Error("Could not parse any messages");
-
-  const summary = await summarizeThreadDelta({
-    source: "manual",
-    contactId: contact.id,
-    counterpartName: counterpartName ?? contact.name,
-    messages,
-  });
-
-  const lastAt = new Date();
-  const [thread] = await db
-    .insert(outreachThreads)
-    .values({
-      source: "manual",
-      owner: parsed.owner,
-      externalThreadId: randomUUID(),
-      contactId: contact.id,
-      counterpartName: counterpartName ?? contact.name,
-      summary: summary.rollingSummary,
-      commitments: summary.commitments,
-      nextSteps: summary.nextSteps,
-      lastMessageKey: lastMessageKey(messages),
-      lastMessageAt: lastAt,
-      messageCount: messages.length,
-    })
-    .returning({ id: outreachThreads.id });
-
-  await db.insert(outreachTimeline).values({
-    threadId: thread.id,
-    contactId: contact.id,
-    source: "manual",
+  await recordPastedConversation({
+    contactId: parsed.contactId,
     owner: parsed.owner,
-    direction: summary.direction,
-    summary: summary.deltaSummary,
-    commitments: summary.commitments,
-    nextSteps: summary.nextSteps,
-    coversTo: lastAt,
-    messageCount: messages.length,
-    model: env.modelOutreach(),
+    channel: parsed.channel ?? null,
+    text: parsed.text,
   });
 
-  await db
-    .update(contacts)
-    .set({ lastTouchAt: lastAt })
-    .where(eq(contacts.id, contact.id));
-
-  revalidatePath(`/admin/contacts/${contact.id}`);
+  // Lands pending in the review queue, not straight on the timeline.
+  revalidatePath("/admin/scout");
+  revalidatePath(`/admin/contacts/${parsed.contactId}`);
   return { ok: true };
 }

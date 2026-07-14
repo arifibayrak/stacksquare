@@ -5,18 +5,28 @@ import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 
+// Ranked by daily workflow and usage: sourcing (scout in, discover) leads the
+// funnel, then the pipeline you work most, outreach, cross-cutting work, then
+// events. Least-used surfaces (submissions, the Quadrant messaging, AI tools)
+// sink to the bottom.
 const sections = [
   {
-    label: "Pipeline",
+    label: "Overview",
+    links: [{ href: "/admin", label: "Dashboard" }],
+  },
+  {
+    label: "Sourcing",
     links: [
-      { href: "/admin", label: "Dashboard" },
-      { href: "/admin/pipeline", label: "Pipeline" },
-      { href: "/admin/contacts", label: "Contacts" },
+      { href: "/admin/scout", label: "Scout queue" },
+      { href: "/admin/research", label: "Discover" },
     ],
   },
   {
-    label: "Work",
-    links: [{ href: "/admin/tasks", label: "Tasks" }],
+    label: "Pipeline",
+    links: [
+      { href: "/admin/pipeline", label: "Pipeline" },
+      { href: "/admin/contacts", label: "Contacts" },
+    ],
   },
   {
     label: "Outreach",
@@ -26,6 +36,10 @@ const sections = [
     ],
   },
   {
+    label: "Work",
+    links: [{ href: "/admin/tasks", label: "Tasks" }],
+  },
+  {
     label: "Events",
     links: [
       { href: "/admin/events", label: "Events" },
@@ -33,15 +47,8 @@ const sections = [
     ],
   },
   {
-    label: "Research",
-    links: [{ href: "/admin/research", label: "Discover" }],
-  },
-  {
     label: "Inbox",
-    links: [
-      { href: "/admin/submissions", label: "Submissions" },
-      { href: "/admin/scout", label: "Scout queue" },
-    ],
+    links: [{ href: "/admin/submissions", label: "Submissions" }],
   },
   {
     label: "The Quadrant",

@@ -1,13 +1,15 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import {
   db,
   contacts,
   touchLog,
   outreachTimeline,
+  outreachThreads,
   OUTREACH_SOURCE_LABELS,
   OUTREACH_DIRECTION_LABELS,
+  CHANNEL_LABELS,
 } from "@/db";
 import { ContactForm } from "@/components/admin/contact-form";
 import {
@@ -42,10 +44,32 @@ export default async function ContactDetail({
     .orderBy(desc(touchLog.happenedAt))
     .limit(50);
 
+  // Only accepted threads reach the timeline; pending/dismissed conversations
+  // wait in (or were dropped from) the review queue.
   const timeline = await db
-    .select()
+    .select({
+      id: outreachTimeline.id,
+      coversTo: outreachTimeline.coversTo,
+      createdAt: outreachTimeline.createdAt,
+      source: outreachTimeline.source,
+      channel: outreachTimeline.channel,
+      direction: outreachTimeline.direction,
+      owner: outreachTimeline.owner,
+      summary: outreachTimeline.summary,
+      commitments: outreachTimeline.commitments,
+      nextSteps: outreachTimeline.nextSteps,
+    })
     .from(outreachTimeline)
-    .where(eq(outreachTimeline.contactId, id))
+    .innerJoin(
+      outreachThreads,
+      eq(outreachTimeline.threadId, outreachThreads.id),
+    )
+    .where(
+      and(
+        eq(outreachTimeline.contactId, id),
+        eq(outreachThreads.reviewStatus, "accepted"),
+      ),
+    )
     .orderBy(desc(outreachTimeline.createdAt))
     .limit(50);
 
@@ -155,8 +179,10 @@ export default async function ContactDetail({
                   >
                     <p className="text-xs text-zinc-500">
                       {formatDate(e.coversTo ?? e.createdAt)} ·{" "}
-                      {OUTREACH_SOURCE_LABELS[e.source]} ·{" "}
-                      {OUTREACH_DIRECTION_LABELS[e.direction]}
+                      {e.channel
+                        ? CHANNEL_LABELS[e.channel]
+                        : OUTREACH_SOURCE_LABELS[e.source]}{" "}
+                      · {OUTREACH_DIRECTION_LABELS[e.direction]}
                       {e.owner ? ` · ${e.owner}` : ""}
                     </p>
                     <p className="mt-1">{e.summary}</p>
