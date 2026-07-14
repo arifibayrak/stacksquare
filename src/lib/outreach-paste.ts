@@ -44,6 +44,9 @@ export async function recordPastedConversation(input: {
   });
 
   const lastAt = new Date();
+  // Lands `pending`: the conversation waits in the review queue and does not
+  // reach the contact's timeline (which filters to accepted threads) or bump
+  // last-touch until it is accepted.
   const [thread] = await db
     .insert(outreachThreads)
     .values({
@@ -60,6 +63,7 @@ export async function recordPastedConversation(input: {
       lastMessageKey: lastMessageKey(messages),
       lastMessageAt: lastAt,
       messageCount: messages.length,
+      reviewStatus: "pending",
     })
     .returning({ id: outreachThreads.id });
 
@@ -77,11 +81,6 @@ export async function recordPastedConversation(input: {
     messageCount: messages.length,
     model: env.modelOutreach(),
   });
-
-  await db
-    .update(contacts)
-    .set({ lastTouchAt: lastAt })
-    .where(eq(contacts.id, contact.id));
 
   return { threadId: thread.id, messageCount: messages.length };
 }

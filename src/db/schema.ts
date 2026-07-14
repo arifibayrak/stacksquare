@@ -182,6 +182,15 @@ export const outreachDirectionEnum = pgEnum("outreach_direction", [
   "mixed",
 ]);
 
+// Review gate for logged conversations. Captured DM logs and pasted chats land
+// `pending` and only reach a contact's timeline once accepted in the review
+// queue. Existing rows default `accepted` so nothing already logged disappears.
+export const outreachReviewStatusEnum = pgEnum("outreach_review_status", [
+  "pending",
+  "accepted",
+  "dismissed",
+]);
+
 // Lifecycle of a central work-queue task (see the `tasks` table).
 export const taskStatusEnum = pgEnum("task_status", ["open", "done"]);
 
@@ -871,6 +880,11 @@ export const outreachThreads = pgTable(
     lastMessageKey: text("last_message_key"),
     lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
     messageCount: integer("message_count").default(0).notNull(),
+    // Review gate: `pending` conversations wait in the review queue; only
+    // `accepted` threads' timeline entries show on the contact.
+    reviewStatus: outreachReviewStatusEnum("review_status")
+      .default("accepted")
+      .notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

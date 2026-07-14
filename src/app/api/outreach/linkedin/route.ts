@@ -146,6 +146,7 @@ export async function POST(request: Request) {
         .set({ lastMessageKey: newKey, lastMessageAt: lastAt, updatedAt: new Date() })
         .where(eq(outreachThreads.id, existing.id));
     } else {
+      // Junk thread: keep it out of the review queue and every timeline.
       await db.insert(outreachThreads).values({
         source: "linkedin",
         owner,
@@ -156,6 +157,7 @@ export async function POST(request: Request) {
         lastMessageKey: newKey,
         lastMessageAt: lastAt,
         messageCount: messages.length,
+        reviewStatus: "dismissed",
       });
     }
     return NextResponse.json(
@@ -208,6 +210,8 @@ export async function POST(request: Request) {
         lastMessageKey: newKey,
         lastMessageAt: lastAt,
         messageCount: messages.length,
+        // New logs wait in the review queue before touching a timeline.
+        reviewStatus: "pending",
       })
       .returning({ id: outreachThreads.id });
     threadId = row.id;
@@ -229,14 +233,17 @@ export async function POST(request: Request) {
     model: env.modelOutreach(),
   });
 
-  // Matched: remember this identity and freshen the contact's last-touch.
+  // Remember the identity so future threads auto-match. Last-touch only moves
+  // once the thread is accepted, so a pending capture does not bump the CRM.
+  const pending = existing ? existing.reviewStatus === "pending" : true;
   if (contact) {
     if (counterpartLinkedin)
       await upsertIdentity(contact.id, "linkedin", counterpartLinkedin);
-    await db
-      .update(contacts)
-      .set({ lastTouchAt: lastAt })
-      .where(eq(contacts.id, contact.id));
+    if (!pending)
+      await db
+        .update(contacts)
+        .set({ lastTouchAt: lastAt })
+        .where(eq(contacts.id, contact.id));
   }
 
   return NextResponse.json(
@@ -245,6 +252,7 @@ export async function POST(request: Request) {
       new: !existing,
       matched: Boolean(contact),
       contactName: contact?.name ?? null,
+      pending,
     },
     { status: 201, headers: CORS_HEADERS },
   );

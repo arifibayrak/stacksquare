@@ -209,7 +209,7 @@ export function PasteConversation({ contactId }: { contactId: string }) {
     start(async () => {
       try {
         await logPastedConversation(fd);
-        toast.success("Conversation summarized and logged");
+        toast.success("Summarized and sent to the Scout review queue");
         setOpen(false);
         const form = document.getElementById(
           "paste-form-" + contactId,

@@ -15,9 +15,10 @@ async function requireUser() {
 }
 
 /**
- * Link an unmatched outreach thread to a contact: set the thread's contactId,
+ * Accept an unmatched conversation from the review queue: link it to a contact,
  * backfill its timeline entries, remember the counterpart's identity so future
- * threads auto-match, and freshen the contact's last-touch.
+ * threads auto-match, freshen last-touch, and mark it accepted so its summary
+ * now shows on that contact's timeline.
  */
 export async function linkThreadToContact(threadId: string, contactId: string) {
   await requireUser();
@@ -38,7 +39,7 @@ export async function linkThreadToContact(threadId: string, contactId: string) {
 
   await db
     .update(outreachThreads)
-    .set({ contactId, updatedAt: new Date() })
+    .set({ contactId, reviewStatus: "accepted", updatedAt: new Date() })
     .where(eq(outreachThreads.id, threadId));
   await db
     .update(outreachTimeline)
@@ -55,16 +56,53 @@ export async function linkThreadToContact(threadId: string, contactId: string) {
     .set({ lastTouchAt: thread.lastMessageAt ?? new Date() })
     .where(eq(contacts.id, contactId));
 
-  revalidatePath("/admin/outreach");
+  revalidatePath("/admin/scout");
   revalidatePath(`/admin/contacts/${contactId}`);
   return { ok: true };
 }
 
-/** Dismiss an unmatched thread. Cascades its timeline entries away. */
+/**
+ * Accept an already-matched conversation from the review queue: mark it accepted
+ * (its summary reaches the contact's timeline) and freshen last-touch.
+ */
+export async function acceptThread(threadId: string) {
+  await requireUser();
+
+  const [thread] = await db
+    .select()
+    .from(outreachThreads)
+    .where(eq(outreachThreads.id, threadId))
+    .limit(1);
+  if (!thread) throw new Error("Thread not found");
+
+  await db
+    .update(outreachThreads)
+    .set({ reviewStatus: "accepted", updatedAt: new Date() })
+    .where(eq(outreachThreads.id, threadId));
+
+  if (thread.contactId) {
+    await db
+      .update(contacts)
+      .set({ lastTouchAt: thread.lastMessageAt ?? new Date() })
+      .where(eq(contacts.id, thread.contactId));
+    revalidatePath(`/admin/contacts/${thread.contactId}`);
+  }
+  revalidatePath("/admin/scout");
+  return { ok: true };
+}
+
+/**
+ * Dismiss a conversation from the review queue. Marked (not deleted) so a later
+ * re-capture of the same thread does not resurrect it, and it never reaches a
+ * timeline.
+ */
 export async function dismissThread(threadId: string) {
   await requireUser();
-  await db.delete(outreachThreads).where(eq(outreachThreads.id, threadId));
-  revalidatePath("/admin/outreach");
+  await db
+    .update(outreachThreads)
+    .set({ reviewStatus: "dismissed", updatedAt: new Date() })
+    .where(eq(outreachThreads.id, threadId));
+  revalidatePath("/admin/scout");
   return { ok: true };
 }
 
@@ -100,6 +138,8 @@ export async function logPastedConversation(formData: FormData) {
     text: parsed.text,
   });
 
+  // Lands pending in the review queue, not straight on the timeline.
+  revalidatePath("/admin/scout");
   revalidatePath(`/admin/contacts/${parsed.contactId}`);
   return { ok: true };
 }
