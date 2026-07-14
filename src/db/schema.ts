@@ -164,6 +164,9 @@ export const outreachDirectionEnum = pgEnum("outreach_direction", [
   "mixed",
 ]);
 
+// Lifecycle of a central work-queue task (see the `tasks` table).
+export const taskStatusEnum = pgEnum("task_status", ["open", "done"]);
+
 export const contacts = pgTable(
   "contacts",
   {
@@ -913,6 +916,48 @@ export const gmailAccounts = pgTable(
   (t) => [uniqueIndex("gmail_accounts_owner_idx").on(t.owner)],
 );
 
+// Central work queue for the two founders. One row per to-do, optionally
+// linked to a contact or an event. Distinct from event_tasks (per-event
+// process checklists): these are the cross-cutting "who does what by when"
+// items surfaced at /admin/tasks.
+export const tasks = pgTable(
+  "tasks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    notes: text("notes"),
+    owner: ownerEnum("owner").notNull(),
+    // Who created the task. Only "arif" or "kerem" is ever written here.
+    createdBy: ownerEnum("created_by").notNull(),
+    status: taskStatusEnum("status").default("open").notNull(),
+    priority: priorityEnum("priority").default("p2"),
+    // Null means the task still needs a deadline.
+    dueDate: date("due_date"),
+    contactId: uuid("contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    eventId: uuid("event_id").references(() => events.id, {
+      onDelete: "set null",
+    }),
+    // Stamped when the task is marked done; cleared on reopen.
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("tasks_owner_idx").on(t.owner),
+    index("tasks_status_idx").on(t.status),
+    index("tasks_due_idx").on(t.dueDate),
+    index("tasks_contact_idx").on(t.contactId),
+    index("tasks_event_idx").on(t.eventId),
+  ],
+);
+
 export type Contact = typeof contacts.$inferSelect;
 export type Capture = typeof captures.$inferSelect;
 export type DiscoveryRun = typeof discoveryRuns.$inferSelect;
@@ -939,6 +984,8 @@ export type ContactIdentity = typeof contactIdentities.$inferSelect;
 export type OutreachThread = typeof outreachThreads.$inferSelect;
 export type OutreachTimelineEntry = typeof outreachTimeline.$inferSelect;
 export type GmailAccount = typeof gmailAccounts.$inferSelect;
+export type Task = typeof tasks.$inferSelect;
+export type NewTask = typeof tasks.$inferInsert;
 
 export const STAGES = [
   "identified",
@@ -1148,4 +1195,14 @@ export const OUTREACH_DIRECTION_LABELS: Record<
   outbound: "Sent",
   inbound: "Received",
   mixed: "Exchange",
+};
+
+export const TASK_STATUSES = ["open", "done"] as const;
+
+export const TASK_STATUS_LABELS: Record<
+  (typeof TASK_STATUSES)[number],
+  string
+> = {
+  open: "Open",
+  done: "Done",
 };

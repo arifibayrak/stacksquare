@@ -15,6 +15,10 @@ const sections = [
     ],
   },
   {
+    label: "Work",
+    links: [{ href: "/admin/tasks", label: "Tasks" }],
+  },
+  {
     label: "Outreach",
     links: [
       { href: "/admin/outreach", label: "Queue" },
