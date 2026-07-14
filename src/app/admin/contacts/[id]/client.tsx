@@ -251,6 +251,20 @@ export function PasteConversation({ contactId }: { contactId: string }) {
       />
       <div className="flex items-center gap-2">
         <select
+          name="channel"
+          defaultValue="whatsapp"
+          className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          title="Platform this conversation happened on"
+        >
+          <option value="whatsapp">WhatsApp</option>
+          <option value="email">Email</option>
+          <option value="linkedin_dm">LinkedIn DM</option>
+          <option value="call">Call</option>
+          <option value="in_person">In person</option>
+          <option value="intro_ask">Intro ask</option>
+          <option value="other">Other</option>
+        </select>
+        <select
           name="owner"
           defaultValue="arif"
           className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"

@@ -1,18 +1,13 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { db, outreachThreads, outreachTimeline, contacts } from "@/db";
-import { env } from "@/lib/env";
+import { CHANNELS } from "@/db/schema";
 import { upsertIdentity } from "@/lib/outreach-identity";
-import {
-  parsePastedTranscript,
-  summarizeThreadDelta,
-  lastMessageKey,
-} from "@/lib/outreach-summarize";
+import { recordPastedConversation } from "@/lib/outreach-paste";
 
 async function requireUser() {
   const { userId } = await auth();
@@ -76,6 +71,7 @@ export async function dismissThread(threadId: string) {
 const PasteInput = z.object({
   contactId: z.string().uuid(),
   owner: z.enum(["arif", "kerem", "both"]).default("arif"),
+  channel: z.enum(CHANNELS).optional().nullable(),
   // Whole WhatsApp / email exports can be long; accept big pastes (the parser
   // keeps the most recent portion) rather than rejecting them.
   text: z.string().min(1).max(500_000),
@@ -93,63 +89,17 @@ export async function logPastedConversation(formData: FormData) {
   const parsed = PasteInput.parse({
     contactId: raw.contactId,
     owner: raw.owner || "arif",
+    channel: raw.channel || null,
     text: raw.text,
   });
 
-  const [contact] = await db
-    .select()
-    .from(contacts)
-    .where(eq(contacts.id, parsed.contactId))
-    .limit(1);
-  if (!contact) throw new Error("Contact not found");
-
-  const { counterpartName, messages } = await parsePastedTranscript(parsed.text);
-  if (!messages.length) throw new Error("Could not parse any messages");
-
-  const summary = await summarizeThreadDelta({
-    source: "manual",
-    contactId: contact.id,
-    counterpartName: counterpartName ?? contact.name,
-    messages,
-  });
-
-  const lastAt = new Date();
-  const [thread] = await db
-    .insert(outreachThreads)
-    .values({
-      source: "manual",
-      owner: parsed.owner,
-      externalThreadId: randomUUID(),
-      contactId: contact.id,
-      counterpartName: counterpartName ?? contact.name,
-      summary: summary.rollingSummary,
-      commitments: summary.commitments,
-      nextSteps: summary.nextSteps,
-      lastMessageKey: lastMessageKey(messages),
-      lastMessageAt: lastAt,
-      messageCount: messages.length,
-    })
-    .returning({ id: outreachThreads.id });
-
-  await db.insert(outreachTimeline).values({
-    threadId: thread.id,
-    contactId: contact.id,
-    source: "manual",
+  await recordPastedConversation({
+    contactId: parsed.contactId,
     owner: parsed.owner,
-    direction: summary.direction,
-    summary: summary.deltaSummary,
-    commitments: summary.commitments,
-    nextSteps: summary.nextSteps,
-    coversTo: lastAt,
-    messageCount: messages.length,
-    model: env.modelOutreach(),
+    channel: parsed.channel ?? null,
+    text: parsed.text,
   });
 
-  await db
-    .update(contacts)
-    .set({ lastTouchAt: lastAt })
-    .where(eq(contacts.id, contact.id));
-
-  revalidatePath(`/admin/contacts/${contact.id}`);
+  revalidatePath(`/admin/contacts/${parsed.contactId}`);
   return { ok: true };
 }

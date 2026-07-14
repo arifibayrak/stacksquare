@@ -858,6 +858,10 @@ export const outreachThreads = pgTable(
     counterpartLinkedin: text("counterpart_linkedin"),
     counterpartEmail: text("counterpart_email"),
     subject: text("subject"),
+    // Platform the conversation happened on (WhatsApp, email, ...). Null for
+    // legacy LinkedIn/Gmail syncs where `source` already implies the platform;
+    // set on manual pastes where the user picks where the chat took place.
+    channel: channelEnum("channel"),
     // Rolling state, refreshed on every sync that finds new messages.
     summary: text("summary"),
     commitments: jsonb("commitments").$type<string[]>().default([]),
@@ -899,6 +903,8 @@ export const outreachTimeline = pgTable(
       onDelete: "cascade",
     }),
     source: outreachSourceEnum("source").notNull(),
+    // Platform the conversation happened on, mirrored from the thread.
+    channel: channelEnum("channel"),
     owner: ownerEnum("owner").notNull(),
     direction: outreachDirectionEnum("direction").notNull(),
     summary: text("summary").notNull(),
@@ -1283,6 +1289,26 @@ export const OUTREACH_SOURCE_LABELS: Record<
   linkedin: "LinkedIn",
   gmail: "Gmail",
   manual: "Manual",
+};
+
+export const CHANNELS = [
+  "linkedin_dm",
+  "email",
+  "whatsapp",
+  "intro_ask",
+  "in_person",
+  "call",
+  "other",
+] as const;
+
+export const CHANNEL_LABELS: Record<(typeof CHANNELS)[number], string> = {
+  linkedin_dm: "LinkedIn DM",
+  email: "Email",
+  whatsapp: "WhatsApp",
+  intro_ask: "Intro ask",
+  in_person: "In person",
+  call: "Call",
+  other: "Other",
 };
 
 export const OUTREACH_DIRECTIONS = ["outbound", "inbound", "mixed"] as const;
