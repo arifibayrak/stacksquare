@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { db, contacts, events, submissions, STAGES } from "@/db";
 import { sql, isNull, and, lte, ne, gte, eq } from "drizzle-orm";
+import { getAgenda, type AgendaItem } from "@/lib/agenda";
+import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -80,9 +82,18 @@ async function getCounts() {
 }
 
 export default async function AdminDashboard() {
-  const { map, pendingSubs, overdue, upcomingEvents } = await getCounts();
+  const [{ map, pendingSubs, overdue, upcomingEvents }, agenda] =
+    await Promise.all([getCounts(), getAgenda()]);
 
   const total = STAGES.reduce((sum, s) => sum + (map.get(s) ?? 0), 0);
+  const agendaTotal =
+    agenda.overdue.length +
+    agenda.today.length +
+    agenda.soon.length +
+    agenda.noDeadline.length +
+    agenda.fromConversations.length +
+    agenda.goingCold.length +
+    agenda.unmatchedThreads;
 
   return (
     <div className="px-8 py-10">
@@ -112,6 +123,53 @@ export default async function AdminDashboard() {
           value={upcomingEvents}
           href="/admin/events"
         />
+      </div>
+
+      <div className="mt-12">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+            Today
+          </h2>
+          <div className="flex items-center gap-3">
+            {agenda.unmatchedThreads > 0 && (
+              <Link
+                href="/admin/outreach"
+                className="text-[11px] text-[var(--color-ink-muted)] hover:underline"
+              >
+                {agenda.unmatchedThreads} unmatched
+              </Link>
+            )}
+            {agenda.noDeadline.length > 0 && (
+              <Link
+                href="/admin/tasks"
+                className="text-[11px] text-amber-600 hover:underline"
+              >
+                {agenda.noDeadline.length} need a deadline
+              </Link>
+            )}
+          </div>
+        </div>
+        {agendaTotal === 0 ? (
+          <p className="mt-4 rounded-lg border border-[var(--color-rule)] bg-white px-4 py-8 text-center text-sm text-[var(--color-ink-muted)] dark:border-zinc-800 dark:bg-zinc-900">
+            All clear. Nothing due.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            <AgendaGroup label="Overdue" items={agenda.overdue} tone="overdue" />
+            <AgendaGroup label="Due today" items={agenda.today} tone="today" />
+            <AgendaGroup
+              label="From conversations"
+              items={agenda.fromConversations}
+              tone="conversation"
+            />
+            <AgendaGroup
+              label="Going cold"
+              items={agenda.goingCold}
+              tone="cold"
+            />
+            <AgendaGroup label="This week" items={agenda.soon} tone="soon" />
+          </div>
+        )}
       </div>
 
       <div className="mt-12">
@@ -192,6 +250,82 @@ function Stat({
       >
         {value}
       </p>
+    </Link>
+  );
+}
+
+function AgendaGroup({
+  label,
+  items,
+  tone,
+}: {
+  label: string;
+  items: AgendaItem[];
+  tone: "overdue" | "today" | "soon" | "conversation" | "cold";
+}) {
+  if (items.length === 0) return null;
+  const dot =
+    tone === "overdue"
+      ? "bg-red-500"
+      : tone === "today"
+        ? "bg-amber-500"
+        : tone === "conversation"
+          ? "bg-brand-500"
+          : tone === "cold"
+            ? "bg-sky-400"
+            : "bg-zinc-300";
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <span className={"h-1.5 w-1.5 rounded-full " + dot} />
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink)]">
+          {label}
+        </h3>
+        <span className="text-[11px] text-[var(--color-ink-muted)]">
+          {items.length}
+        </span>
+      </div>
+      <div className="mt-2 divide-y divide-[var(--color-rule)] overflow-hidden rounded-lg border border-[var(--color-rule)] bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
+        {items.map((it) => (
+          <AgendaRow key={it.kind + it.id} item={it} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AgendaRow({ item }: { item: AgendaItem }) {
+  const initials =
+    item.owner === "arif"
+      ? "A"
+      : item.owner === "kerem"
+        ? "K"
+        : item.owner === "both"
+          ? "AK"
+          : "·";
+  return (
+    <Link
+      href={item.href}
+      className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+    >
+      <span
+        className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+        title={item.owner ? `Owner: ${item.owner}` : "Unassigned"}
+      >
+        {initials}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-sm text-[var(--color-ink)]">
+        {item.title}
+        {item.context && (
+          <span className="text-[var(--color-ink-muted)]">
+            {" · "}
+            {item.context}
+          </span>
+        )}
+      </span>
+      <span className="shrink-0 font-mono text-[11px] text-[var(--color-ink-muted)]">
+        {item.due ? formatDate(item.due) : "no date"}
+      </span>
     </Link>
   );
 }

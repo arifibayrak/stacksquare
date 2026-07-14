@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   logTouch,
@@ -11,6 +11,7 @@ import {
   setContactCircle,
   setContactParked,
 } from "@/lib/actions/contacts";
+import { logPastedConversation } from "@/lib/actions/outreach-threads";
 import { QuickPill } from "@/components/admin/quick-pill";
 import { findContactInfo } from "@/lib/actions/enrich";
 import { STAGES, STAGE_LABELS, CIRCLES, CIRCLE_LABELS } from "@/db/schema";
@@ -196,6 +197,83 @@ export function TouchLogForm({ contactId }: { contactId: string }) {
       >
         {pending ? "Logging…" : "Log touch"}
       </button>
+    </form>
+  );
+}
+
+export function PasteConversation({ contactId }: { contactId: string }) {
+  const [pending, start] = useTransition();
+  const [open, setOpen] = useState(false);
+
+  function onSubmit(fd: FormData) {
+    start(async () => {
+      try {
+        await logPastedConversation(fd);
+        toast.success("Conversation summarized and logged");
+        setOpen(false);
+        const form = document.getElementById(
+          "paste-form-" + contactId,
+        ) as HTMLFormElement | null;
+        form?.reset();
+      } catch (err) {
+        toast.error(
+          "Could not log: " + (err instanceof Error ? err.message : "unknown"),
+        );
+      }
+    });
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full rounded-md border border-dashed border-zinc-300 px-3 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+      >
+        Paste a conversation (WhatsApp, email, call notes)
+      </button>
+    );
+  }
+
+  return (
+    <form
+      id={"paste-form-" + contactId}
+      action={onSubmit}
+      className="space-y-3 rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+    >
+      <input type="hidden" name="contactId" value={contactId} />
+      <textarea
+        name="text"
+        rows={6}
+        required
+        placeholder="Paste the conversation. It is summarized by AI; the raw text is discarded."
+        className="block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+      />
+      <div className="flex items-center gap-2">
+        <select
+          name="owner"
+          defaultValue="arif"
+          className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          <option value="arif">Arif</option>
+          <option value="kerem">Kerem</option>
+          <option value="both">Both</option>
+        </select>
+        <button
+          type="submit"
+          disabled={pending}
+          className="ml-auto rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        >
+          {pending ? "Summarizing…" : "Log conversation"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }

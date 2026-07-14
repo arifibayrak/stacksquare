@@ -1,7 +1,15 @@
 import Link from "next/link";
-import { db, contacts, outreachLog, outreachTemplates } from "@/db";
-import { desc, sql, gte, eq, inArray } from "drizzle-orm";
-import { OutreachComposer } from "./client";
+import {
+  db,
+  contacts,
+  outreachLog,
+  outreachTemplates,
+  outreachThreads,
+  gmailAccounts,
+  OUTREACH_SOURCE_LABELS,
+} from "@/db";
+import { desc, sql, gte, eq, inArray, isNull } from "drizzle-orm";
+import { OutreachComposer, UnmatchedThreads, GmailCard } from "./client";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +21,25 @@ export default async function OutreachQueuePage() {
     .where(inArray(contacts.stage, ["researched", "reached_out", "replying"]))
     .orderBy(desc(contacts.priority), desc(contacts.updatedAt))
     .limit(50);
+
+  const unmatched = await db
+    .select()
+    .from(outreachThreads)
+    .where(isNull(outreachThreads.contactId))
+    .orderBy(desc(outreachThreads.updatedAt))
+    .limit(50);
+
+  const contactOptions = await db
+    .select({
+      id: contacts.id,
+      name: contacts.name,
+      company: contacts.company,
+    })
+    .from(contacts)
+    .orderBy(desc(contacts.updatedAt))
+    .limit(500);
+
+  const gmail = await db.select().from(gmailAccounts);
 
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
@@ -58,6 +85,44 @@ export default async function OutreachQueuePage() {
           Manage templates
         </Link>
       </div>
+
+      <section className="mt-8">
+        <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-500">
+          Channels
+        </h2>
+        <div className="mt-4">
+          <GmailCard
+            accounts={gmail.map((a) => ({
+              owner: a.owner,
+              email: a.email,
+              lastSyncAt: a.lastSyncAt ? formatDate(a.lastSyncAt) : null,
+              status: a.status,
+            }))}
+          />
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-500">
+          Unmatched conversations
+          {unmatched.length > 0 ? ` (${unmatched.length})` : ""}
+        </h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          Captured DM / email threads we could not match to a contact. Link them
+          to file the summary on that contact's timeline, or dismiss.
+        </p>
+        <UnmatchedThreads
+          threads={unmatched.map((t) => ({
+            id: t.id,
+            sourceLabel: OUTREACH_SOURCE_LABELS[t.source],
+            counterpartName: t.counterpartName,
+            counterpartLinkedin: t.counterpartLinkedin,
+            summary: t.summary,
+            when: formatDate(t.lastMessageAt ?? t.updatedAt),
+          }))}
+          contacts={contactOptions}
+        />
+      </section>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[2fr_1fr]">
         <section>

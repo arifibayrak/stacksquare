@@ -2,6 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { SignOutButton } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/sidebar";
+import { AssistantLauncher } from "@/components/admin/assistant/assistant";
 
 export const metadata = { title: "Admin · StackSquare" };
 
@@ -61,6 +62,7 @@ export default async function AdminLayout({
       <main className="flex-1 overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
         {children}
       </main>
+      <AssistantLauncher />
     </div>
   );
 }
