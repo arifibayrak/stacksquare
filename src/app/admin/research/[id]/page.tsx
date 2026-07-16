@@ -15,6 +15,7 @@ import {
   DiscoverForm,
   ProspectRow,
   SearchesPanel,
+  DeleteListButton,
   type Row,
   type RunCard,
 } from "./client";
@@ -168,20 +169,25 @@ export default async function SegmentPage({
 
   return (
     <div className="px-8 py-10">
-      <Link
-        href="/admin/research"
-        className="text-sm text-[var(--color-ink-muted)] hover:text-brand-600"
-      >
-        ← Discover
-      </Link>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
-        {seg.name}
-      </h1>
-      {seg.description && (
-        <p className="mt-1 max-w-2xl text-sm text-[var(--color-ink-soft)]">
-          {seg.description}
-        </p>
-      )}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Link
+            href="/admin/research"
+            className="text-sm text-[var(--color-ink-muted)] hover:text-brand-600"
+          >
+            ← Discover
+          </Link>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
+            {seg.name}
+          </h1>
+          {seg.description && (
+            <p className="mt-1 max-w-2xl text-sm text-[var(--color-ink-soft)]">
+              {seg.description}
+            </p>
+          )}
+        </div>
+        <DeleteListButton id={seg.id} name={seg.name} />
+      </div>
 
       {/* One-line picture */}
       <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-[var(--color-ink-soft)]">

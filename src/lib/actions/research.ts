@@ -1061,6 +1061,34 @@ export async function deleteDiscoveryRun(
   revalidatePath(`/admin/research/${run.segmentId}`);
 }
 
+/**
+ * Hard-delete a whole discover list (segment). Cascades remove its
+ * segment_members and discovery_runs. Prospects are GLOBAL, so they survive the
+ * cascade; afterwards we sweep the people this list held and delete only those
+ * now orphaned (in no other list) AND never promoted. Promoted people and
+ * anyone still in another list are always kept.
+ */
+export async function deleteSegment(segmentId: string) {
+  await requireUser();
+
+  // Collect prospectIds BEFORE the cascade wipes segment_members.
+  const mems = await db
+    .select({ prospectId: segmentMembers.prospectId })
+    .from(segmentMembers)
+    .where(eq(segmentMembers.segmentId, segmentId));
+
+  // Cascade removes this segment's members + discovery_runs; prospects untouched.
+  await db.delete(segments).where(eq(segments.id, segmentId));
+
+  // Sweep now-orphaned, non-promoted prospects (reuses existing helper).
+  for (const m of mems) {
+    await maybeDeleteOrphanProspect(m.prospectId);
+  }
+
+  revalidatePath("/admin/research");
+  redirect("/admin/research");
+}
+
 // ---------------------------------------------------------------------------
 // Promotion — the ONLY path a prospect becomes a warm contact
 // ---------------------------------------------------------------------------
