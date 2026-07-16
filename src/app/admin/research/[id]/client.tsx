@@ -11,6 +11,7 @@ import {
   dismissProspect,
   deleteMember,
   deleteDiscoveryRun,
+  deleteSegment,
   setChecked,
 } from "@/lib/actions/research";
 import { PROSPECT_ROLES, PROSPECT_ROLE_LABELS } from "@/db/schema";
@@ -70,6 +71,38 @@ const inputCls =
   "block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-zinc-700 dark:bg-zinc-900";
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : "Unknown error");
+
+export function DeleteListButton({ id, name }: { id: string; name?: string }) {
+  const [pending, start] = useTransition();
+  function onClick() {
+    if (
+      !confirm(
+        `Delete ${name ? `“${name}”` : "this list"}? People only in ` +
+          "this list are removed. Anyone already added to Contacts is kept.",
+      )
+    )
+      return;
+    start(async () => {
+      try {
+        await deleteSegment(id);
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("NEXT_REDIRECT"))
+          throw err; // let Next's redirect through
+        toast.error(msg(err) || "Delete failed");
+      }
+    });
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+    >
+      {pending ? "Deleting…" : "Delete list"}
+    </button>
+  );
+}
 
 export function SeedForm({ segmentId }: { segmentId: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
