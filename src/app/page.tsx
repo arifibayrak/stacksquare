@@ -13,6 +13,14 @@ import { getPublishedEvents } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
+const LINKEDIN_URL = "https://www.linkedin.com/company/stacksquareai";
+
+function lumaCalendarUrl(): string | null {
+  const raw = process.env.NEXT_PUBLIC_LUMA_CALENDAR_ID?.trim();
+  if (!raw) return null;
+  return raw.startsWith("http") ? raw : `https://luma.com/calendar/${raw}`;
+}
+
 const formats = [
   {
     name: "Fireside chats",
@@ -102,6 +110,7 @@ function TickerRow() {
 export default async function HomePage() {
   const { upcoming, past } = await getPublishedEvents();
   const recentPast = past.slice(0, 3);
+  const calendarUrl = lumaCalendarUrl();
 
   return (
     <PublicShell>
@@ -220,15 +229,41 @@ export default async function HomePage() {
             ) : (
               <Reveal className="mt-12">
                 <div className="rounded-xl border border-dashed border-[var(--color-rule)] bg-[rgba(24,21,17,0.55)] p-8 backdrop-blur-sm">
-                  <p className="text-lg text-[var(--color-ink-soft)]">
-                    The next session is being planned.{" "}
-                    <Link
-                      href="/contact#attend"
-                      className="draw-link text-[var(--color-ink)]"
+                  <div className="flex flex-wrap gap-3">
+                    {calendarUrl && (
+                      <a
+                        href={calendarUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group inline-flex items-center gap-2 rounded-md bg-[var(--color-ink)] px-5 py-2.5 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.5)]"
+                      >
+                        Follow on Luma
+                        <span
+                          aria-hidden
+                          className="transition-transform duration-300 group-hover:translate-x-1"
+                        >
+                          ↗
+                        </span>
+                      </a>
+                    )}
+                    <a
+                      href={LINKEDIN_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group inline-flex items-center gap-2 rounded-md border border-[var(--color-rule)] px-5 py-2.5 text-base font-medium text-[var(--color-ink)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--color-ink)]"
                     >
-                      Follow the calendar
-                    </Link>{" "}
-                    and you&rsquo;ll be the first to know.
+                      Follow on LinkedIn
+                      <span
+                        aria-hidden
+                        className="transition-transform duration-300 group-hover:translate-x-1"
+                      >
+                        ↗
+                      </span>
+                    </a>
+                  </div>
+                  <p className="mt-6 text-lg leading-relaxed text-[var(--color-ink-soft)]">
+                    The next session is being planned, and you&rsquo;ll be the
+                    first to know.
                   </p>
                 </div>
               </Reveal>
