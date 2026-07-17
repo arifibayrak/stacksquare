@@ -27,8 +27,8 @@ const formats = [
     blurb: "Founders, investors, and operators around one table. Small enough that everyone talks.",
   },
   {
-    name: "Hackathons & ideathons",
-    blurb: "Teams form in the room and build something real. An idea becomes a demo, and the best ones keep going.",
+    name: "Building sessions",
+    blurb: "Hackathons and ideathons where teams build something real, fast.",
   },
 ];
 
