@@ -26,12 +26,18 @@ const formats = [
     name: "Peer gatherings",
     blurb: "Founders, investors, and operators around one table. Small enough that everyone talks.",
   },
+  {
+    name: "Hackathons & ideathons",
+    blurb: "Teams form in the room and build something real. An idea becomes a demo, and the best ones keep going.",
+  },
 ];
 
 const tickerItems = [
   "Fireside chats",
   "Expert sessions",
   "Peer gatherings",
+  "Hackathons",
+  "Ideathons",
   "Technology stack",
   "Capital structure",
   "Strategic planning",
@@ -254,7 +260,7 @@ export default async function HomePage() {
                 What we host
               </p>
             </Reveal>
-            <Stagger className="mt-10 grid gap-x-8 gap-y-10 sm:grid-cols-3">
+            <Stagger className="mt-10 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
               {formats.map((f, i) => (
                 <StaggerItem key={f.name} className="group">
                   <div className="border-t border-[var(--color-rule)] pt-6 transition-colors duration-300 group-hover:border-[var(--color-ink)]">
