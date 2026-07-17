@@ -115,10 +115,10 @@ export default async function HomePage() {
             </h1>
             <FadeIn delay={0.55}>
               <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
-                Stacksquare is an events organization for founders, investors,
-                and operators. We host fireside chats, expert sessions, and
-                peer gatherings in small rooms, and read every conversation
-                through four lenses: stack, capital, strategy, and psychology.
+                Stacksquare brings together founders, investors, and operators
+                building in London. We host intimate events where the
+                conversations are worth having, and the people in the room are
+                worth knowing.
               </p>
             </FadeIn>
             <FadeIn delay={0.68}>
