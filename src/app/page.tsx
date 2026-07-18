@@ -4,7 +4,6 @@ import { PublicShell } from "@/components/public-shell";
 import { EventCard } from "@/components/event-card";
 import {
   FadeIn,
-  MaskedLine,
   Reveal,
   Stagger,
   StaggerItem,
@@ -116,17 +115,30 @@ export default async function HomePage() {
     <PublicShell>
       <main>
         <section>
-          <div className="mx-auto max-w-4xl px-6 py-16 text-center sm:py-24">
-            <h1 className="font-display mx-auto max-w-3xl text-[clamp(1.85rem,3.6vw,2.9rem)] font-medium leading-[1.18] text-[var(--color-ink)]">
-              <MaskedLine delay={0.12}>
-                Stacksquare brings together founders, investors, and operators
-                building in London. We host intimate events where the
-                conversations are worth having, and the people in the room are
-                worth knowing.
-              </MaskedLine>
-            </h1>
-            <FadeIn delay={0.55}>
-              <p className="font-display mt-8 text-[clamp(1.5rem,3vw,2.3rem)] font-medium leading-[1.06] italic text-[var(--color-ink-muted)]">
+          <div className="mx-auto max-w-5xl px-6 py-16 text-center sm:py-24">
+            <FadeIn delay={0.12}>
+              <h1 className="font-display mx-auto max-w-4xl text-left text-[clamp(2rem,4vw,3.15rem)] font-medium leading-[1.16] text-[var(--color-ink)] [text-wrap:pretty] sm:text-justify">
+                Stacksquare brings together{" "}
+                <strong className="font-semibold">founders</strong>,{" "}
+                <strong className="font-semibold">investors</strong>, and{" "}
+                <strong className="font-semibold">operators</strong> building in{" "}
+                <strong className="font-semibold">London</strong>. We host{" "}
+                <em className="italic text-[var(--color-ink-soft)]">
+                  intimate events
+                </em>{" "}
+                where the conversations are{" "}
+                <em className="italic text-[var(--color-ink-soft)]">
+                  worth having
+                </em>
+                , and the people in the room are{" "}
+                <em className="italic text-[var(--color-ink-soft)]">
+                  worth knowing
+                </em>
+                .
+              </h1>
+            </FadeIn>
+            <FadeIn delay={0.5}>
+              <p className="font-display mt-10 text-[clamp(1.6rem,3.2vw,2.5rem)] font-medium leading-[1.06] italic text-[var(--color-ink-muted)]">
                 We meet in the{" "}
                 <span className="text-[var(--color-brand-600)]">square</span>.
               </p>
