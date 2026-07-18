@@ -122,11 +122,11 @@ export default async function HomePage() {
                 <strong className="font-semibold">founders</strong>,{" "}
                 <strong className="font-semibold">investors</strong>, and{" "}
                 <strong className="font-semibold">operators</strong> building in{" "}
-                <strong className="font-semibold">London</strong>. We host{" "}
+                <strong className="font-semibold">London</strong>. We{"\u00A0"}host{" "}
                 <em className="italic text-[var(--color-ink-soft)]">
                   intimate events
                 </em>{" "}
-                where the conversations are{" "}
+                where the conversations are{"\u00A0"}
                 <em className="italic text-[var(--color-ink-soft)]">
                   worth having
                 </em>
