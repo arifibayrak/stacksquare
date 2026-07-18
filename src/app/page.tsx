@@ -117,23 +117,18 @@ export default async function HomePage() {
       <main>
         <section>
           <div className="mx-auto max-w-4xl px-6 py-16 text-center sm:py-24">
-            <h1 className="font-display text-[clamp(2.3rem,5vw,4rem)] font-medium leading-[1.06] text-[var(--color-ink)]">
-              <MaskedLine delay={0.12}>Strategy meets capital.</MaskedLine>
-              <MaskedLine delay={0.24}>Stack meets psychology.</MaskedLine>
-              <MaskedLine delay={0.36}>
-                <span className="italic text-[var(--color-ink-muted)]">
-                  We meet in the{" "}
-                  <span className="text-[var(--color-brand-600)]">square</span>
-                  .
-                </span>
-              </MaskedLine>
-            </h1>
-            <FadeIn delay={0.55}>
-              <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-[var(--color-ink-soft)] sm:text-xl">
+            <h1 className="font-display mx-auto max-w-3xl text-[clamp(1.85rem,3.6vw,2.9rem)] font-medium leading-[1.18] text-[var(--color-ink)]">
+              <MaskedLine delay={0.12}>
                 Stacksquare brings together founders, investors, and operators
                 building in London. We host intimate events where the
                 conversations are worth having, and the people in the room are
                 worth knowing.
+              </MaskedLine>
+            </h1>
+            <FadeIn delay={0.55}>
+              <p className="font-display mt-8 text-[clamp(1.5rem,3vw,2.3rem)] font-medium leading-[1.06] italic text-[var(--color-ink-muted)]">
+                We meet in the{" "}
+                <span className="text-[var(--color-brand-600)]">square</span>.
               </p>
             </FadeIn>
             <FadeIn delay={0.68}>
