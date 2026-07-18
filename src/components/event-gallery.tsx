@@ -1,7 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import {
+  type TouchEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 /**
  * Event photos as a continuously scrolling reel (content is rendered twice for
@@ -25,6 +31,19 @@ export function EventGallery({
     },
     [count],
   );
+
+  // Touch swipe: flick left/right on the image to move between photos.
+  const touchStartX = useRef<number | null>(null);
+  const onTouchStart = (e: TouchEvent) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  };
+  const onTouchEnd = (e: TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) -
+      touchStartX.current;
+    if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+    touchStartX.current = null;
+  };
 
   // While the lightbox is open: lock body scroll and wire up keyboard nav.
   useEffect(() => {
@@ -117,14 +136,14 @@ export function EventGallery({
           aria-modal="true"
           aria-label={`${title} photos`}
           onClick={() => setOpenIndex(null)}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[rgba(8,7,6,0.94)] px-4 py-16 backdrop-blur-sm sm:px-16"
+          className="fixed inset-0 z-[100] flex select-none flex-col items-center justify-center bg-[rgba(8,7,6,0.94)] px-4 py-16 backdrop-blur-sm sm:px-16"
         >
           {/* Close */}
           <button
             type="button"
             onClick={() => setOpenIndex(null)}
             aria-label="Close"
-            className="absolute right-4 top-4 flex size-11 items-center justify-center rounded-full border border-[rgba(240,235,223,0.2)] text-[var(--color-paper)] transition-colors duration-200 hover:bg-[rgba(240,235,223,0.12)] sm:right-6 sm:top-6"
+            className="absolute right-4 top-4 z-10 flex size-11 items-center justify-center rounded-full border border-white/45 bg-black/45 text-white shadow-lg backdrop-blur-sm transition-colors duration-200 hover:border-white/80 hover:bg-white/25 sm:right-6 sm:top-6"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -151,7 +170,7 @@ export function EventGallery({
                 go(-1);
               }}
               aria-label="Previous photo"
-              className="absolute left-2 top-1/2 flex size-12 -translate-y-1/2 items-center justify-center rounded-full border border-[rgba(240,235,223,0.2)] text-[var(--color-paper)] transition-colors duration-200 hover:bg-[rgba(240,235,223,0.12)] sm:left-6 sm:size-14"
+              className="absolute left-2 top-1/2 z-10 flex size-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/45 bg-black/45 text-white shadow-lg backdrop-blur-sm transition-colors duration-200 hover:border-white/80 hover:bg-white/25 sm:left-6 sm:size-14"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -172,7 +191,9 @@ export function EventGallery({
           {/* Image */}
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative flex h-[78vh] w-full max-w-5xl items-center justify-center"
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            className="relative flex h-[78vh] w-full max-w-5xl touch-pan-y items-center justify-center"
           >
             <Image
               key={images[openIndex]}
@@ -195,7 +216,7 @@ export function EventGallery({
                 go(1);
               }}
               aria-label="Next photo"
-              className="absolute right-2 top-1/2 flex size-12 -translate-y-1/2 items-center justify-center rounded-full border border-[rgba(240,235,223,0.2)] text-[var(--color-paper)] transition-colors duration-200 hover:bg-[rgba(240,235,223,0.12)] sm:right-6 sm:size-14"
+              className="absolute right-2 top-1/2 z-10 flex size-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/45 bg-black/45 text-white shadow-lg backdrop-blur-sm transition-colors duration-200 hover:border-white/80 hover:bg-white/25 sm:right-6 sm:size-14"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -216,7 +237,7 @@ export function EventGallery({
           {/* Counter */}
           <p
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-6 font-mono text-xs uppercase tracking-[0.18em] text-[rgba(240,235,223,0.7)]"
+            className="absolute bottom-6 rounded-full bg-black/50 px-4 py-1.5 font-mono text-xs uppercase tracking-[0.18em] text-white/90 backdrop-blur-sm"
           >
             {openIndex + 1} / {count}
           </p>
