@@ -117,7 +117,7 @@ export default async function HomePage() {
         <section>
           <div className="mx-auto max-w-5xl px-6 py-16 text-center sm:py-24">
             <FadeIn delay={0.12}>
-              <h1 className="font-display mx-auto max-w-4xl text-left text-[clamp(2rem,4vw,3.15rem)] font-medium leading-[1.16] text-[var(--color-ink)] [text-wrap:pretty] sm:text-justify">
+              <h1 className="font-display mx-auto max-w-4xl text-left text-[clamp(1.7rem,3.3vw,2.6rem)] font-medium leading-[1.2] text-[var(--color-ink)] [text-wrap:pretty]">
                 Stacksquare brings together{" "}
                 <strong className="font-semibold">founders</strong>,{" "}
                 <strong className="font-semibold">investors</strong>, and{" "}
@@ -138,7 +138,7 @@ export default async function HomePage() {
               </h1>
             </FadeIn>
             <FadeIn delay={0.5}>
-              <p className="font-display mt-10 text-[clamp(1.6rem,3.2vw,2.5rem)] font-medium leading-[1.06] italic text-[var(--color-ink-muted)]">
+              <p className="font-display mx-auto mt-10 max-w-4xl text-left text-[clamp(1.85rem,3.7vw,2.9rem)] font-medium leading-[1.06] italic text-[var(--color-ink-muted)]">
                 We meet in the{" "}
                 <span className="text-[var(--color-brand-600)]">square</span>.
               </p>
