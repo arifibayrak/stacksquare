@@ -144,7 +144,7 @@ export default async function HomePage() {
               </p>
             </FadeIn>
             <FadeIn delay={0.68}>
-              <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+              <div className="mx-auto mt-9 flex max-w-4xl flex-wrap items-center justify-start gap-4">
                 <Link
                   href="/events"
                   className="group inline-flex items-center gap-2 rounded-none bg-[var(--color-ink)]/75 px-6 py-3 text-base font-medium text-[var(--color-paper)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[var(--color-ink)]/90 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
