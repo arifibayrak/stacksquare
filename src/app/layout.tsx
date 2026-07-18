@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Stacksquare",
     description:
-      "Events for founders, investors, and operators. Strategy meets capital.",
+      "Stacksquare brings together founders, investors, and operators building in London. Intimate events where the conversations are worth having.",
     url: "https://stacksquare.ai",
     siteName: "Stacksquare",
     type: "website",
