@@ -100,7 +100,7 @@ export function EventCard({
           // checkout-button.js has loaded; falls back to the event page on click.
           <a
             href={event.lumaUrl ?? `https://luma.com/event/${event.lumaEventId}`}
-            className="luma-checkout--button mt-6 inline-flex w-fit items-center gap-2 rounded-md bg-[var(--color-ink)] px-5 py-2.5 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(26,26,26,0.5)]"
+            className="luma-checkout--button mt-6 inline-flex w-fit items-center gap-2 rounded-none bg-[var(--color-ink)] px-5 py-2.5 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(26,26,26,0.5)]"
             data-luma-action="checkout"
             data-luma-event-id={event.lumaEventId}
           >

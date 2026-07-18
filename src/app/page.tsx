@@ -147,7 +147,7 @@ export default async function HomePage() {
               <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
                 <Link
                   href="/events"
-                  className="group inline-flex items-center gap-2 rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
+                  className="group inline-flex items-center gap-2 rounded-none bg-[var(--color-ink)]/75 px-6 py-3 text-base font-medium text-[var(--color-paper)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[var(--color-ink)]/90 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
                 >
                   See the events
                   <span
@@ -242,7 +242,7 @@ export default async function HomePage() {
                         href={calendarUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="group inline-flex items-center gap-2 rounded-md bg-[var(--color-ink)] px-5 py-2.5 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.5)]"
+                        className="group inline-flex items-center gap-2 rounded-none bg-[var(--color-ink)] px-5 py-2.5 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(0,0,0,0.5)]"
                       >
                         Follow on Luma
                         <span
@@ -350,7 +350,7 @@ export default async function HomePage() {
               <div className="relative mt-10 flex flex-wrap items-center justify-center gap-4">
                 <Link
                   href="/events"
-                  className="rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
+                  className="rounded-none bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
                 >
                   See the events
                 </Link>

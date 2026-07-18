@@ -102,7 +102,7 @@ export default function ContactPage() {
                     href={calendarUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="group inline-flex items-center gap-2 rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(26,26,26,0.5)]"
+                    className="group inline-flex items-center gap-2 rounded-none bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(26,26,26,0.5)]"
                   >
                     Follow the calendar on Luma
                     <span

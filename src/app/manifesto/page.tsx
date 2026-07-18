@@ -118,7 +118,7 @@ export default function ManifestoPage() {
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <Link
                 href="/events"
-                className="group inline-flex items-center gap-2 rounded-md bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
+                className="group inline-flex items-center gap-2 rounded-none bg-[var(--color-ink)] px-6 py-3 text-base font-medium text-[var(--color-paper)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
               >
                 See the events
                 <span
