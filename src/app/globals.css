@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-brand-50: oklch(0.96 0.02 264);
-  --color-brand-500: oklch(0.45 0.19 264);
-  --color-brand-600: oklch(0.38 0.18 264);
-  --color-brand-700: oklch(0.31 0.16 264);
+  --color-brand-50: oklch(0.95 0.03 252);
+  --color-brand-500: oklch(0.45 0.19 252);
+  --color-brand-600: oklch(0.38 0.18 252);
+  --color-brand-700: oklch(0.31 0.16 252);
 
   --color-paper: #fbfaf8;
   --color-paper-soft: #f3f1ec;
@@ -66,10 +66,10 @@ body {
     --color-rule: #2a2a2a;
     --color-grid: rgba(255, 255, 255, 0.04);
 
-    --color-brand-50: oklch(0.24 0.06 264);
-    --color-brand-500: oklch(0.6 0.19 264);
-    --color-brand-600: oklch(0.55 0.19 264);
-    --color-brand-700: oklch(0.48 0.17 264);
+    --color-brand-50: oklch(0.24 0.06 252);
+    --color-brand-500: oklch(0.6 0.19 252);
+    --color-brand-600: oklch(0.55 0.19 252);
+    --color-brand-700: oklch(0.48 0.17 252);
 
     --color-phase-sourcing: #8a857c;
     --color-phase-outreach: #e0a45a;
@@ -100,10 +100,10 @@ h1, h2, h3 {
   --color-rule: #2b2823;
   --color-grid: rgba(240, 235, 223, 0.045);
 
-  --color-brand-50: oklch(0.24 0.07 264);
-  --color-brand-500: oklch(0.52 0.21 264);
-  --color-brand-600: oklch(0.64 0.18 264);
-  --color-brand-700: oklch(0.78 0.1 264);
+  --color-brand-50: oklch(0.24 0.08 252);
+  --color-brand-500: oklch(0.54 0.21 252);
+  --color-brand-600: oklch(0.6 0.21 252);
+  --color-brand-700: oklch(0.74 0.13 252);
 
   background-color: var(--color-paper);
   color: var(--color-ink);

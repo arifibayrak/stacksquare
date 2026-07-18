@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { type EventItem } from "@/db/schema";
 import { formatDate } from "@/lib/utils";
+import { EventGallery } from "@/components/event-gallery";
 
 export function EventCard({
   event,
@@ -38,42 +39,7 @@ export function EventCard({
 
       <div>
         {event.gallery && event.gallery.length > 0 ? (
-          // All event photos in a continuously scrolling reel (content is
-          // rendered twice for a seamless loop). Pauses on hover.
-          <div className="marquee photo-reel mb-7 py-2">
-            <div
-              className="marquee-track"
-              style={{ animationDuration: `${event.gallery.length * 7}s` }}
-            >
-              {[false, true].map((clone) => (
-                <div
-                  key={clone ? "clone" : "reel"}
-                  aria-hidden={clone}
-                  className="flex shrink-0 gap-5 pr-5"
-                >
-                  {event.gallery!.map((src, i) => (
-                    <div
-                      key={src}
-                      className={`relative shrink-0 overflow-hidden rounded-[4px] border border-[var(--color-rule)] bg-[var(--color-paper-soft)] shadow-[0_24px_48px_-20px_rgba(0,0,0,0.8)] transition-transform duration-500 hover:scale-[1.03] ${
-                        i === 0
-                          ? "aspect-[4/3] h-56 sm:h-64"
-                          : "aspect-[3/4] h-56 sm:h-64"
-                      }`}
-                    >
-                      <Image
-                        src={src}
-                        alt={clone ? "" : `${event.title} photo ${i + 1}`}
-                        fill
-                        quality={85}
-                        sizes="(min-width: 640px) 360px, 300px"
-                        className="object-cover"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
+          <EventGallery images={event.gallery} title={event.title} />
         ) : event.coverImage ? (
           <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-xl border border-[var(--color-rule)] bg-[var(--color-paper-soft)]">
             <Image

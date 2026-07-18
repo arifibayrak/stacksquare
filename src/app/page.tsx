@@ -118,11 +118,17 @@ export default async function HomePage() {
           <div className="mx-auto max-w-5xl px-6 py-16 text-center sm:py-24">
             <FadeIn delay={0.12}>
               <h1 className="font-display mx-auto max-w-4xl text-left text-[clamp(1.7rem,3.3vw,2.6rem)] font-medium leading-[1.2] text-[var(--color-ink)] [text-wrap:pretty]">
-                Stacksquare brings together{" "}
+                <span className="font-semibold text-[var(--color-brand-600)]">
+                  Stacksquare
+                </span>{" "}
+                brings together{" "}
                 <strong className="font-semibold">founders</strong>,{" "}
                 <strong className="font-semibold">investors</strong>, and{" "}
                 <strong className="font-semibold">operators</strong> building in{" "}
-                <strong className="font-semibold">London</strong>. We{"\u00A0"}host{" "}
+                <strong className="font-semibold text-[var(--color-brand-600)]">
+                  London
+                </strong>
+                . We{"\u00A0"}host{" "}
                 <em className="italic text-[var(--color-ink-soft)]">
                   intimate events
                 </em>{" "}
